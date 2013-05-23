@@ -1,6 +1,7 @@
 #!/usr/bin/perl -w
 # ======================================================================================
-# $Id$
+# $Id: check_lsi_raid 25 2013-05-02 19:36:30Z s1110239032 $
+# check_lsi_raid: Nagios/Icinga plugin to check LSI Raid Controller status
 # --------------------------------------------------------------------------------------
 # Created as part of a semester project at the University of Applied Sciences Hagenberg
 # (http://www.fh-ooe.at/en/hagenberg-campus/)
@@ -10,17 +11,775 @@
 #   Scheipner Alexander (s1110239032@students.fh-hagenberg.at)
 #   Werner Sebastian    (s1110239038@students.fh-hagenberg.at)
 #
-# This program is free software; you can redistribute it and/or
-# modify it under the terms of the GNU General Public License
-# as published by the Free Software Foundation; either version 2
-# of the License, or (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program; if not, write to the Free Software
-# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+# This program is free software; you can redistribute it and/or modify it under
+# the terms of the GNU General Public License as published by the Free Software
+# Foundation; either version 3 of the License, or (at your option) any later
+# version.
+# 
+# This program is distributed in the hope that it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+# FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
+# details.
+# 
+# You should have received a copy of the GNU General Public License along with
+# this program; if not, see <http://www.gnu.org/licenses/>.
 # ======================================================================================
+use strict;
+use warnings;
+use Getopt::Long qw(:config no_ignore_case);
+use Data::Dumper;
+use feature qw/switch/; #später durch nachfolgende Zeile ersetzen, da wir noch mit Perl 5 arbeiten!
+#use Switch 'Perl6'; 
+
+our $VERBOSITY = 0;
+our $VERSION = "0.1";
+our $NAME = "check_lsi_raid: Nagios/Icinga plugin to check LSI Raid Controller status";
+
+use constant { 
+	STATE_OK => 0,
+	STATE_WARNING => 1,
+	STATE_CRITICAL => 2,
+	STATE_UNKNOWN => 3,
+ };
+
+# Always return the highest state level
+sub getExitState {
+	my $returnState = STATE_OK;
+	# check if no state is NULL
+	if (!defined($_[0]) || !defined($_[1])) {
+		$returnState = STATE_UNKNOWN;
+	}
+	# check previous state
+	if ($_[0] > $returnState) {
+		$returnState = $_[0];
+	}
+	# check upcoming state
+	if ($_[1] > $returnState) {
+		$returnState = $_[1];
+	}
+	return $returnState;
+}
+
+# Explains the Usage of the plugin, also which options take which values
+sub displayUsage {
+	print "Usage: \n";
+	print "  [ -h | --help ]\n	Display this help page\n";
+	print "  [ -v | -vv | -vvv | --verbose ]\n	Sets the verbosity level.\n	no -v is the normal single line output for Nagios/Icinga\n	-v is a more detailed version but still usable in Nagios.\n	-vv is a multiline output for debugging configuration errors or more detailed information.\n	-vvv is for plugin problem diagnosis.\n	For further information please visit: http://nagiosplug.sourceforge.net/developer-guidelines.html#AEN39\n";
+	print "  [ -V --version ]\n	Displays the Version of the tk-lsi-plugin and the version of StorCLI\n";
+	print "  [ -C <Controller Number> | --controller <Controller Number> ]\n	Specifies a Controller number, defaults to 1\n";
+	print "  [ -EID | --enclosure ]\n	Specifies one or more Enclosures, defaults to all\n	Takes either an integer as additional argument (>=0) or a comma seperated list(0,1,2,3,...)\n";
+	print "  [ -LD | --logicaldevice ]\n	Specifies one or more Logical Devices, defaults to all\n	Takes either an integer as additional argument (>=0) or a comma seperated list(0,1,2,3,...)\n";
+	print "  [ -PD | --physicaldevice ]\n	Specifies one or more Physical Devices, defaults to all\n	Takes either an integer as additional argument (>=0) or a comma seperated list(0,1,2,3,...)\n";
+	print "  [ -Tw | --temperature-warn ]\n	Specifies the RAID-Controller temperature warning range, default is 40C or more\n";
+	print "  [ -Tc | --temperature-critical ]\n	Specifies the RAID-Controller temperature critical error range, default is 50C or more\n";
+	print "  [ -PDTw | --physicaldevicetemperature-warn ]\n	Specifies the disk temperature warning range, default is 40C or more\n";
+	print "  [ -PDTc | --physicaldevicetemperature-critical ]\n	Specifies the disk temperature critical error range, default is 45C or more\n";
+	print "  [ -p <path> | --path <path>]\n	Specifies the path to StorCLI, default is /usr/bin/storcli or C:\\Programme\\...\\storcli.exe\n";
+	print "  [ -b <0/1> | BBU <0/1> ]\n	Boolean Value which specifies if an Battery Backup Unit is Present (1 is present/0 is not Present). Default is 1\n	This option is only needed if you have an LSI-Raid Controller without a Battery Backup Unit.";
+}
+
+# Displays a short Help text for the user
+# TODO: FH Copyright, ADD URL and Mailing List
+sub displayHelp {
+	print $NAME . " Version: " . $VERSION ."\n";
+	print "Copyright (C) 2009-2013 Thomas-Krenn.AG\n";
+	#FH Copyright
+	print "Current updates available at http://www.thomas-krenn.com/en/oss/<NOT HERE YET!!!!!!>/\n";
+	print "This Nagios/Icinga Plugin checks LSI RAID-Controllers for Controller, \nPhysical-Device and Logical Device warnings and errors.\n";
+	print "In order for this plugin to work properly you need to add the \nnagios-user to your sudoers file (or create a new one in /etc/sudoers.d/)\n";
+	displayUsage();
+	print "Further information about this plugin can be found at
+http://www.thomas-krenn.com/en/oss/<NOT THERE YET!>
+Send email to the <NOT THERE YET!>-plugin-user mailing list if you have questions regarding
+use of this software, to submit patches, or suggest improvements.
+The mailing list is available at http://lists.thomas-krenn.com/";
+	exit(STATE_UNKNOWN);
+}
+ 
+# Prints the Name, Version of the Plugin
+# Also Prints the version of StorCLI
+sub displayVersion {
+	my $sudo = $_[0];
+	my $storcli = $_[1];
+	my @storcliVersion = `$sudo $storcli -v`;
+	print $NAME . "\nVersion: ". $VERSION . "\n\n";
+	foreach my $line (@storcliVersion){
+		if($line =~ /^\s*Storage/) {
+			$line =~ s/^\s+|\s+$//g;
+			print $line;
+		}
+	}
+}
+
+# Returns information about:
+#		- Controller status
+#		- Temperature, ...
+sub getControllerStatus {
+	my $sudo = $_[0];
+	my $storcli = $_[1];
+	my $controller = $_[2];
+	my @temperature_w = @{($_[3])};
+	my @temperature_c = @{($_[4])};
+
+	my $command = "$sudo $storcli /c$controller show all";
+	my $status = 0; # Return Status
+	my $statusMessage = ''; # Return String
+
+	my @output = `$command`;
+	#my @output = ("", "Status = Success\n");
+
+	#command successful?
+	if($output[1] eq "Status = Success\n") {
+		foreach my $line (@output) {
+			#/^([a-zA-Z0-9]*)/ erstes wort
+			#/(\s+[a-zA-Z0-9]*)/ zweites wort
+			#/([a-zA-Z0-9]*)$/ letztes wort
+			my $first;
+			my $last;
+			if($line =~ /^([a-zA-Z0-9]*)/) {
+				$first = $1;
+				if($line =~ /([a-zA-Z0-9]*)$/) {
+					$last = $1;
+					given($first) {
+						when("Controller") {
+							if($line =~ /(\s+[a-zA-Z0-9]*)/) {
+								given($1) {
+									when("Status") {
+										if($last ne "OK") {
+											$status = getExitState($status, STATE_WARNING);
+											$statusMessage .= "Ctrl. status not optimal, ";
+										}
+									}
+									when("must") {
+										if($last ne "No") {
+											$status = getExitState($status, STATE_CRITICAL);
+											$statusMessage .= "Ctrl. needs reboot, ";
+										}
+									}
+									when("has") {
+										if($last ne "No") {
+											$status = getExitState($status, STATE_WARNING);
+											$statusMessage .= "Ctrl. booted in safe mode, ";
+										}
+									}
+								}
+							}
+						}
+						when("Memory") {
+							if($line =~ /(\s+[a-zA-Z0-9]*)/) {
+								given($1) {
+									when("Correctable") {
+										if($last ne "0") {
+											$status = getExitState($status, STATE_WARNING);
+											$statusMessage .= "Memory correctable errors detected, ";
+										}
+									}
+									when("Uncorrectable") {
+										if($last ne "0") {
+											$status = getExitState($status, STATE_CRITICAL);
+											$statusMessage .= "Memory uncorrectable errors detected, ";
+										}
+									}
+								}
+							}
+						}
+						when("Failed") {
+							if($last ne "No") {
+								$status = getExitState($status, STATE_WARNING);
+								$statusMessage .= "Failed to get lock key on bootup, ";
+							}
+						}
+						when("A") {
+							if($last ne "No") {
+								$status = getExitState($status, STATE_WARNING);
+								$statusMessage .= "A rollback operation is in progress, ";
+							}
+						}
+					}
+				}
+			}
+		}
+		return ($status, $statusMessage);
+	} else {
+		print "Invalid StorCLI command!";
+		exit(STATE_UNKNOWN);
+	}	
+}
+
+sub getLogicalDeviceStatus {
+	my $sudo = $_[0];
+	my $storcli = $_[1];
+	my $controller = $_[2];
+	my @logDevices = @{($_[3])};
+
+	my $command = "$sudo $storcli /c$controller ";
+	my $status = 0; # Return Status
+	my $statusMessage = ''; # Return String
+
+	given(scalar(@logDevices)) {
+		when(0) { $command .= "/vall"; }
+		when(1) { $command .= "/v$logDevices[0]"; }
+		default { $command .= "/v".join(",", @logDevices); }
+	}
+	$command .= " show all";
+	my @output = `$command`;
+	#my @output = ("", "Status = Success\n", "/c0/v1 :", "1/1   RAID5 Optl  RW     Yes     RWBD  -   930.0 GB");
+
+	#command successful?
+	if($output[1] eq "Status = Success\n") {
+		my $output_dev = -1;
+		my $flag = -1;
+		foreach my $line (@output) {
+			#/^([a-zA-Z0-9]*)/ erstes wort
+			#/(\s+[a-zA-Z0-9]*)/ zweites wort
+			#/([a-zA-Z0-9]*)$/ letztes wort
+			if($flag > 0) {
+				$flag--;
+			} elsif($line =~ /^\/c$controller\/v([0-9]*)/) {
+				$output_dev = $1;
+				$flag = 6;
+			}
+			if($flag eq 0) {
+				$flag = -1;
+				my @values = split(' ',$line);
+				if($values[2] ne "Optl") {
+					if($values[4] eq "Yes") {
+						$status = getExitState($status, STATE_WARNING);
+						if ($VERBOSITY == 0) {$statusMessage .= "Virtual disk state not optimal, "; }
+						if ($VERBOSITY >= 1) {$statusMessage .= "Virtual disk $output_dev state not optimal ($values[2]), "; }
+					} else {
+						$status = getExitState($status, STATE_CRITICAL);
+						if ($VERBOSITY == 0) {$statusMessage .= "Virtual disk not consistant, "; }
+						if ($VERBOSITY >= 1) {$statusMessage .= "Virtual disk $output_dev is not consistant (state $values[2]), "; }
+					}
+				}
+			}
+		}
+		return ($status, $statusMessage);
+	} else {
+		print "Invalid StorCLI command!";
+		exit(STATE_UNKNOWN);
+	}
+}
+
+# Returns information about:
+#		- Physical device status
+sub getPhysDeviceStatus {
+	my $sudo = $_[0];
+	my $storcli = $_[1];
+	my $controller = $_[2];
+	my @enclosures = @{($_[3])};
+	my @physDevices = @{($_[4])};
+	my @physicalDeviceTemperature_w = @{($_[5])};
+	my @physicalDeviceTemperature_c = @{($_[6])};
+	my $action = $_[7];
+
+	my $command = "$sudo $storcli /c$controller";
+	my $status = 0;
+	my $statusMessage = '';
+
+	given(scalar(@enclosures)) {
+		when(0) { $command .= "/eall"; }
+		when(1) { $command .= "/e$enclosures[0]"; }
+		default { $command .= "/e".join(",", @enclosures); }
+	}
+	given(scalar(@physDevices)) {
+		when(0) { $command .= "/sall"; }
+		when(1) { $command .= "/s$physDevices[0]"; }
+		default { $command .= "/s".join(",", @physDevices); }
+	}
+	$command .= " show $action";
+	my @output = `$command`;
+	#my @output = ("", "Status = Success\n", "Drive /c0/e252/s0 State :", "=======================", "Shield Counter = 0", "Media Error Count = 0", "Other Error Count = 0", "Drive Temperature =  31C (87.80 F)", "Predictive Failure Count = 0", "S.M.A.R.T alert flagged by drive = No");
+	
+	if($output[1] eq "Status = Success\n") {
+		if($action eq "all") {
+			my $output_enc = -1;
+			my $output_dev = -1;
+			foreach my $line (@output) {
+				my $first;
+				my $last;
+				if($line =~ /^Drive\s\/c$controller\/e([0-9]*)\/s([0-9]*)\sState\s\:/) {
+					$output_enc = $1;
+					$output_dev = $2;
+				}
+				if(($output_enc ne -1) && ($output_dev ne -1)) {
+					if($line =~ /^([a-zA-Z0-9\.]*)/) {
+						$first = $1;
+						if($line =~ /([a-zA-Z0-9]*)$/) {
+							$last = $1;
+							given($first) {
+								when("Shield") {
+									if($last ne "0") {
+										$status = getExitState($status, STATE_WARNING);
+										if ($VERBOSITY == 0) {$statusMessage .= "Shield counter (phys. drive) not 0, "; }
+										if ($VERBOSITY == 1) {$statusMessage .= "Physical drive $output_dev: shield counter not 0, "; }
+										if ($VERBOSITY >= 2) {$statusMessage .= "Physical drive $output_dev in enclosure $output_enc: shield counter not 0, "; }
+									}
+								}
+								when("Media") {
+									if($last ne "0") {
+										$status = getExitState($status, STATE_WARNING);
+										if ($VERBOSITY == 0) {$statusMessage .= "Media error count (phys. drive) not 0, "; }
+										if ($VERBOSITY == 1) {$statusMessage .= "Physical drive $output_dev: media error count not 0, "; }
+										if ($VERBOSITY >= 2) {$statusMessage .= "Physical drive $output_dev in enclosure $output_enc: media error count not 0, "; }
+									}
+								}
+								when("Other") {
+									if($last ne "0") {
+										$status = getExitState($status, STATE_WARNING);
+										if ($VERBOSITY == 0) {$statusMessage .= "Other error count (phys. drive) not 0, "; }
+										if ($VERBOSITY == 1) {$statusMessage .= "Physical drive $output_dev: media error count not 0, "; }
+										if ($VERBOSITY >= 2) {$statusMessage .= "Physical drive $output_dev in enclosure $output_enc: media error count not 0, "; }
+									}
+								}
+								when("Drive") {
+									if($line =~ /^Drive\sTemperature\s=\s*(-?[0-9]*)C/) {
+										my $temp = $1;
+										my $crit = 0;
+										# check for warn range
+										if($physicalDeviceTemperature_w[0] eq "in") {
+											if(($temp >= $physicalDeviceTemperature_w[1]) && ($temp <= $physicalDeviceTemperature_w[2])) {
+												# is in warn range, so also check if in critical error range
+												if($physicalDeviceTemperature_c[0] eq "in") {
+													if(($temp >= $physicalDeviceTemperature_c[1]) && ($temp <= $physicalDeviceTemperature_c[2])) {
+														# critical error
+														$crit = 1;
+														$status = getExitState($status, STATE_CRITICAL);
+														if ($VERBOSITY == 0) {$statusMessage .= "Phys. drive temperature critical, "; }
+														if ($VERBOSITY == 1) {$statusMessage .= "Physical drive $output_dev: temperature is ${temp}C, "; }
+														if ($VERBOSITY >= 2) {$statusMessage .= "Physical drive $output_dev in enclosure $output_enc: temperature is ${temp}C, "; }
+													}
+												} else {
+													if(($temp < $physicalDeviceTemperature_c[1]) || ($temp > $physicalDeviceTemperature_c[2])) {
+														# critical error
+														$crit = 1;
+														$status = getExitState($status, STATE_CRITICAL);
+														if ($VERBOSITY == 0) {$statusMessage .= "Phys. drive temperature critical, "; }
+														if ($VERBOSITY == 1) {$statusMessage .= "Physical drive $output_dev: temperature is ${temp}C, "; }
+														if ($VERBOSITY >= 2) {$statusMessage .= "Physical drive $output_dev in enclosure $output_enc: temperature is ${temp}C, "; }
+													}
+												}
+												if($crit eq 0) { # only warn if not already given a critical error
+													$status = getExitState($status, STATE_WARNING);
+													if ($VERBOSITY == 0) {$statusMessage .= "Phys. drive temperature warning, "; }
+													if ($VERBOSITY == 1) {$statusMessage .= "Physical drive $output_dev: temperature is ${temp}C, "; }
+													if ($VERBOSITY >= 2) {$statusMessage .= "Physical drive $output_dev in enclosure $output_enc: temperature is ${temp}C, "; }
+												}
+											}
+										} else {
+											if(($temp < $physicalDeviceTemperature_w[1]) || ($temp > $physicalDeviceTemperature_w[2])) {
+												# is in warn range, so also check if in critical error range
+												if($physicalDeviceTemperature_c[0] eq "in") {
+													if(($temp >= $physicalDeviceTemperature_c[1]) && ($temp <= $physicalDeviceTemperature_c[2])) {
+														# critical error
+														$crit = 1;
+														$status = getExitState($status, STATE_CRITICAL);
+														if ($VERBOSITY == 0) {$statusMessage .= "Phys. drive temperature critical, "; }
+														if ($VERBOSITY == 1) {$statusMessage .= "Physical drive $output_dev: temperature is ${temp}C, "; }
+														if ($VERBOSITY >= 2) {$statusMessage .= "Physical drive $output_dev in enclosure $output_enc: temperature is ${temp}C, "; }
+													}
+												} else {
+													if(($temp < $physicalDeviceTemperature_c[1]) || ($temp > $physicalDeviceTemperature_c[2])) {
+														# critical error
+														$crit = 1;
+														$status = getExitState($status, STATE_CRITICAL);
+														if ($VERBOSITY == 0) {$statusMessage .= "Phys. drive temperature critical, "; }
+														if ($VERBOSITY == 1) {$statusMessage .= "Physical drive $output_dev: temperature is ${temp}C, "; }
+														if ($VERBOSITY >= 2) {$statusMessage .= "Physical drive $output_dev in enclosure $output_enc: temperature is ${temp}C, "; }
+													}
+												}
+												if($crit eq 0) { # only warn if not already given a critical error
+													$status = getExitState($status, STATE_WARNING);
+													if ($VERBOSITY == 0) {$statusMessage .= "Phys. drive temperature warning, "; }
+													if ($VERBOSITY == 1) {$statusMessage .= "Physical drive $output_dev: temperature is ${temp}C, "; }
+													if ($VERBOSITY >= 2) {$statusMessage .= "Physical drive $output_dev in enclosure $output_enc: temperature is ${temp}C, "; }
+												}
+											}
+										}
+									}
+								}
+								when("Predictive") {
+									if($last ne "0") {
+										$status = getExitState($status, STATE_WARNING);
+										if ($VERBOSITY == 0) {$statusMessage .= "Phys. drive Predictive Fail Count not 0, "; }
+										if ($VERBOSITY == 1) {$statusMessage .= "Physical drive $output_dev: Predictive Fail Count not 0, "; }
+										if ($VERBOSITY >= 2) {$statusMessage .= "Physical drive $output_dev in enclosure $output_enc: Predictive Fail Count not 0, "; }
+									}
+								}
+								when("S.M.A.R.T") {
+									if($last ne "No") {
+										$status = getExitState($status, STATE_WARNING);
+										if ($VERBOSITY == 0) {$statusMessage .= "S.M.A.R.T alert flagged by drive, "; }
+										if ($VERBOSITY == 1) {$statusMessage .= "Physical drive $output_dev: S.M.A.R.T alert flagged, "; }
+										if ($VERBOSITY >= 2) {$statusMessage .= "Physical drive $output_dev in enclosure $output_enc: S.M.A.R.T alert flagged, "; }
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		} else {
+			my $output_enc = -1;
+			my $output_dev = -1;
+			foreach my $line (@output) {
+				if($line =~ /^\/c$controller\/e([0-9]*)\/s([0-9]*)/) {
+					$output_enc = $1;
+					$output_dev = $2;
+				}
+				if(($output_enc ne -1) && ($output_dev ne -1)) {
+					if($line =~ /^\/c$controller$output_enc$output_dev\s*([\-]{1}|[0-9\%]*)\s*([\w\s]*)$/) { # gets status and percentage
+						if($2 ne "Not in progress") {
+							$status = getExitState($status, STATE_WARNING);
+							if ($VERBOSITY == 0) {$statusMessage .= "Phys. drive: $action in progress, "; }
+							if ($VERBOSITY == 1) {$statusMessage .= "Physical drive $output_dev: $action in progress, "; }
+							if ($VERBOSITY >= 2) {$statusMessage .= "Physical drive $output_dev in enclosure $output_enc: $action in progress (percentage: $1), "; }
+						}
+					}
+				}
+			}
+		}
+		return ($status, $statusMessage);
+	} else {
+		print "Invalid StorCLI command!";
+		exit(STATE_UNKNOWN);
+	}
+}
+
+# Returns information about:
+#		- Battery Backup Unit status
+#		- Temperature, Battery status, voltage
+sub getBBUStatus {
+	my $sudo = $_[0];
+	my $storcli = $_[1];
+	my $controller = $_[2];
+
+	my $command = "$sudo $storcli /c$controller/bbu show status";
+	my $status = 0;
+	my $statusMessage = '';
+
+	my @output = `$command`;
+	#my @output = ("", "Status = Success\n");
+
+	if($output[1] eq "Status = Success\n") {
+		my $blockid = 0;
+		foreach my $line (@output) {
+			my $first;
+			my $last;
+			if($line =~ /^([a-zA-Z0-9]*)/) {
+				$first = $1;
+				if($first eq 'BBU_Info' || $first eq 'BBU_Firmware_Status' || $first eq 'GasGaugeStatus') {
+					$blockid++;
+				}
+				if($line =~ /([a-zA-Z0-9]*)$/) {
+					$last = $1;
+					# Check BBU_Info block
+					if ($blockid eq 1) {
+						given($first) {
+							when("Battery") {
+								if($line =~ /(\s+[a-zA-Z0-9]*)/) {
+									given($1) {
+										when("State") {
+											if($last ne "Optimal") {
+												$status = getExitState($status, STATE_WARNING);
+												$statusMessage .= "BBU state not optimal, ";
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+					# Check BBU_Firmware_Status
+					if ($blockid eq 2) {
+						given($first) {
+							when("Temperature") {
+								if($last ne "OK") {
+									$status = getExitState($status, STATE_CRITICAL);
+									if ($VERBOSITY == 0) {$statusMessage .= "BBU temp. critical, "; }
+									if ($VERBOSITY >= 1) {$statusMessage .= "BBU Temperature critical, "; }
+								}
+							}
+							when("Battery") {
+								if($line =~ /(\s+[a-zA-Z0-9]*)/) {
+									given($1) {
+										when("State") {
+											if($last ne "Optimal") {
+												$status = getExitState($status, STATE_WARNING);
+												$statusMessage .= "BBU state not optimal, ";
+											}
+										}
+										when("Pack") {
+											if($last ne "No") {
+												$status = getExitState($status, STATE_CRITICAL);
+												$statusMessage .= "BBU pack missing, ";
+											}
+										}
+										when("Replacement") {
+											if($last ne "No") {
+												$status = getExitState($status, STATE_WARNING);
+												$statusMessage .= "BBU replacement required, ";
+											}
+										}
+									}
+								}
+							}
+							when("Voltage") {
+								if($last ne "OK") {
+									$status = getExitState($status, STATE_CRITICAL);
+									$statusMessage .= "BBU voltage not ok, ";
+								}
+							}
+							when("Learn") {
+								if($last ne "OK") {
+									$status = getExitState($status, STATE_WARNING);
+									$statusMessage .= "BBU learn cycle status not ok, ";
+								}
+							}
+							when("I2C") {
+								if($last ne "No") {
+									$status = getExitState($status, STATE_CRITICAL);
+									$statusMessage .= "BBU I2C errors, ";
+								}
+							}
+							when("Remaining") {
+								if($last ne "No") {
+									$status = getExitState($status, STATE_WARNING);
+									if ($VERBOSITY == 0) {$statusMessage .= "BBU capacity low, "; }
+									if ($VERBOSITY >= 1) {$statusMessage .= "BBU remaining capacity is low, "; }
+								}
+							}
+						}
+					}
+					# Check GasGaugeStatus
+					if ($blockid eq 3) {
+						given($first) {
+							when("Over") {
+								if($line =~ /(\s+[a-zA-Z0-9]*)/) {
+									if($1 eq "Temperature") {
+										if($last ne "No") {
+											$status = getExitState($status, STATE_CRITICAL);
+											if ($VERBOSITY == 0) {$statusMessage .= "BBU temp. critical, "; }
+											if ($VERBOSITY >= 1) {$statusMessage .= "BBU Temperature critical, "; }
+										}
+									} elsif($1 eq "Charged") {
+										if($last ne "No") {
+											$status = getExitState($status, STATE_CRITICAL);
+											$statusMessage .= "BBU over charged, ";
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+		return ($status, $statusMessage);
+	} else {
+		print "Invalid StorCLI command!";
+		exit(STATE_UNKNOWN);
+	}
+}
+
+# Nagios development guidelines: temperature threshold sheme
+# http://nagiosplug.sourceforge.net/developer-guidelines.html#THRESHOLDFORMAT
+# Returns a temperature range (array) in or out which a temperature should be
+# Array content: ("in" or "out", range from, range to)
+# Example ranges:
+#				Generate an alert if x...
+#	-Tw 10			< 0 or > 10, (outside the range of {0 .. 10})
+#	-Tw 10:			< 10, (outside {10 .. inf})
+#	-Tw ~:10		> 10, (outside the range of {-inf .. 10})
+#	-Tw 10:20		< 10 or > 20, (outside the range of {10 .. 20})
+#	-Tw @10:20		>= 10 and <= 20, (inside the range of {10 .. 20})
+sub getThresholds {
+	my @thresholds = @{($_[0])};
+	my $default = $_[1];
+
+	if(scalar(@thresholds) eq 0) {
+		return @thresholds = ("out", -273, $default);
+	}
+	if(substr($thresholds[0], 0, 1) eq "@") {
+		if($thresholds[0] =~ /^\@([0-9]*)\:([0-9]*)$/) {
+			@thresholds = ("in", $1, $2);
+		} else {
+			print "Invalid temperature parameter!";
+			exit(STATE_UNKNOWN);
+		}
+	} elsif(substr($thresholds[0], 0, 1) eq "~") {
+		if($thresholds[0] =~ /^\~\:([0-9]*)$/) {
+			@thresholds = ("out", -273, $1);
+		} else {
+			print "Invalid temperature parameter!";
+			exit(STATE_UNKNOWN);
+		}
+	} elsif(index($thresholds[0], ":") ne -1) {
+		if($thresholds[0] =~ /^([0-9]*)\:([0-9]{1,3})$/) {
+			@thresholds = ("out", $1, $2);
+		} elsif($thresholds[0] =~ /^([0-9]*)\:$/) {
+			@thresholds = ("in", -273, ($1 - 1));
+		} else {
+			print "Invalid temperature parameter!";
+			exit(STATE_UNKNOWN);
+		}
+	} else {
+		@thresholds = ("out", 0, $thresholds[0]);
+	}
+	if(($thresholds[1] =~ /^(-?[0-9]*)$/) && ($thresholds[2] =~ /^(-?[0-9]*)$/)) {
+		return @thresholds;
+	} else {
+		print "Invalid temperature parameter!";
+		exit(STATE_UNKNOWN);
+	}
+}
+
+MAIN: {
+	my $sudo = '';
+	my $storcli = '';
+	my $controller = 0;
+	my @enclosures;
+	my @logDevices;
+	my @physDevices;
+ 	my @temperature_w;
+	my @temperature_c;
+	my @physicalDeviceTemperature_w;
+	my @physicalDeviceTemperature_c;
+	my $bbu = 1;
+	my $platform = $^O;
+ 	my $statusMessage = '';
+	
+	if ( !(GetOptions(
+		'h|help' => sub {displayHelp();},
+		'v|verbose' => sub {$VERBOSITY = 1 },
+		'vv' => sub {$VERBOSITY = 2},
+		'vvv' => sub {$VERBOSITY = 3},
+		'V|version' => sub {displayVersion($sudo, $storcli);},
+		'C|controller=i' => \$controller,
+		'EID|enclosure=s' => \@enclosures,
+		'LD|logicaldevice=s' => \@logDevices,
+		'PD|physicaldevice=s' => \@physDevices, 
+		'Tw|temperature-warn=s' => \@temperature_w,
+		'Tc|temperature-critical=s' => \@temperature_c,
+		'PDTw|physicaldevicetemperature-warn=s' => \@physicalDeviceTemperature_w,
+		'PDTc|physicaldevicetemperature-critical=s' => \@physicalDeviceTemperature_c,
+		'p|path=s' => \$storcli,
+		'b|BBU=i' => \$bbu
+	)))	{
+		print $NAME . " Version: " . $VERSION ."\n";
+		displayUsage();
+		exit(STATE_UNKNOWN);
+	}
+
+	# Check platform
+	if ($platform eq 'linux') {
+		chomp($sudo = `which sudo`);
+		if ($storcli eq '') {
+			if ( -e '/opt/MegaRAID/storcli/storcli64') {
+				$storcli = '/opt/MegaRAID/storcli/storcli64'
+			}
+			elsif ( -e '/opt/MegaRAID/storcli/storcli') {
+				$storcli = '/opt/MegaRAID/storcli/storcli'
+			}
+			else {
+				chomp($storcli= `which storcli`);
+			}
+		}
+		unless ( -e $storcli && -x $sudo ) {
+			print "No sudo rights or StorCLI not found!\n";
+			exit(STATE_UNKNOWN);
+		}
+	} else {
+		eval('use File::Which');
+		$sudo = '';
+		if ($storcli eq '') {
+			if (defined(which( 'storcli64.exe' )) ) {
+				$storcli = which( 'storcli64.exe' );
+			} elsif (defined(which( 'storcli.exe' ))) {
+				$storcli = which( 'storcli.exe' );
+			}
+		}
+		unless ( -e $storcli ) {
+			print "StorCLI not found!\n";
+			exit(STATE_UNKNOWN);
+		}
+	}
+
+ 	# Input validation
+ 	my @controllerVersion = `$sudo $storcli /c$controller show all`;
+	#my @controllerVersion = ("", "", "Description = None\n");
+ 	if($controllerVersion[2] eq "Description = Controller $controller not found\n") {
+ 		print "Invalid controller number, device not found!";
+ 		exit(STATE_UNKNOWN);
+ 	}
+	if(($bbu ne "1") && ($bbu ne "0")) {
+		print "Invalid BBU parameter, must be 0 or 1!";
+		exit(STATE_UNKNOWN);
+	} else {
+		if($bbu eq "1") {
+			my @bbucheck = `$sudo $storcli /c$controller/bbu show`;
+			my $flag = 0;
+			my $found = 0;
+			foreach my $line (@bbucheck) {
+				if($flag > 0) {
+					$flag--;
+				} elsif($line =~ /^([a-zA-Z]*)/) {
+					if($1 eq "Model") {
+						$flag = 2;
+					}
+				}
+				if($flag eq 0) {
+					my @values = split(' ', $line);
+					if(defined($values[6])) {
+						if($values[6] =~ /^([0-9]{4}\/[0-9]{2}\/[0-9]{2})$/) {
+							$found = 1;
+						}
+					}
+				}
+			}
+			if($found eq 0) {
+				print "No battery backup unit found for controller $controller!";
+				exit(STATE_UNKNOWN);
+			}
+		}
+	}
+	@enclosures = split(/,/,join(',', @enclosures));
+	@logDevices = split(/,/,join(',', @logDevices));
+	@physDevices = split(/,/,join(',', @physDevices));
+	@temperature_w = getThresholds(\@temperature_w, 40); # 40 = default value
+	@temperature_c = getThresholds(\@temperature_c, 50);
+	@physicalDeviceTemperature_w = getThresholds(\@physicalDeviceTemperature_w, 40);
+	@physicalDeviceTemperature_c = getThresholds(\@physicalDeviceTemperature_c, 45);
+
+	# Set exit status
+	my $exitstatus = 0;
+	my $newexitstatus = 0;
+	my $newstatusMessage = '';
+	($newexitstatus, $statusMessage) = getControllerStatus($sudo, $storcli, $controller, \@temperature_w, \@temperature_c);
+	$newstatusMessage .= $statusMessage;
+	$exitstatus = getExitState($newexitstatus, $exitstatus);
+	($newexitstatus, $statusMessage) = getLogicalDeviceStatus($sudo, $storcli, $controller, \@logDevices);
+	$newstatusMessage .= $statusMessage;
+	$exitstatus = getExitState($newexitstatus, $exitstatus);
+	($newexitstatus, $statusMessage) = getPhysDeviceStatus($sudo, $storcli, $controller, \@enclosures, \@physDevices, \@physicalDeviceTemperature_w, \@physicalDeviceTemperature_c, "initialization");
+	$newstatusMessage .= $statusMessage;
+	$exitstatus = getExitState($newexitstatus, $exitstatus);
+	($newexitstatus, $statusMessage) = getPhysDeviceStatus($sudo, $storcli, $controller, \@enclosures, \@physDevices, \@physicalDeviceTemperature_w, \@physicalDeviceTemperature_c, "rebuild");
+	$newstatusMessage .= $statusMessage;
+	$exitstatus = getExitState($newexitstatus, $exitstatus);
+	($newexitstatus, $statusMessage) = getPhysDeviceStatus($sudo, $storcli, $controller, \@enclosures, \@physDevices, \@physicalDeviceTemperature_w, \@physicalDeviceTemperature_c, "all");
+	$newstatusMessage .= $statusMessage;
+	$exitstatus = getExitState($newexitstatus, $exitstatus);
+	if($bbu) {
+		($newexitstatus, $statusMessage) = getBBUStatus($sudo, $storcli, $controller);
+		$newstatusMessage .= $statusMessage;
+		$exitstatus = getExitState($newexitstatus, $exitstatus);
+	}
+	given($exitstatus) {
+		when(0) { print "LSIRAID OK (Ctrl #$controller)\n"; }
+		when(1) { chop($newstatusMessage); chop($newstatusMessage); print "LSIRAID WARNING (Ctrl #$controller): [$newstatusMessage]\n"; }
+		when(2) { chop($newstatusMessage); chop($newstatusMessage); print "LSIRAID CRITICAL (Ctrl #$controller): [$newstatusMessage]\n"; }
+	}
+	exit($exitstatus);
+}
