@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 # ======================================================================================
-# $Id: check_lsi_raid 25 2013-05-02 19:36:30Z s1110239032 $
+# $Id$
 # check_lsi_raid: Nagios/Icinga plugin to check LSI Raid Controller status
 # --------------------------------------------------------------------------------------
 # Created as part of a semester project at the University of Applied Sciences Hagenberg
@@ -32,7 +32,7 @@ use feature qw/switch/; #später durch nachfolgende Zeile ersetzen, da wir noch m
 #use Switch 'Perl6'; 
 
 our $VERBOSITY = 0;
-our $VERSION = "0.1";
+our $VERSION = "0.2";
 our $NAME = "check_lsi_raid: Nagios/Icinga plugin to check LSI Raid Controller status";
 
 use constant { 
@@ -66,7 +66,7 @@ sub displayUsage {
 	print "  [ -h | --help ]\n	Display this help page\n";
 	print "  [ -v | -vv | -vvv | --verbose ]\n	Sets the verbosity level.\n	no -v is the normal single line output for Nagios/Icinga\n	-v is a more detailed version but still usable in Nagios.\n	-vv is a multiline output for debugging configuration errors or more detailed information.\n	-vvv is for plugin problem diagnosis.\n	For further information please visit: http://nagiosplug.sourceforge.net/developer-guidelines.html#AEN39\n";
 	print "  [ -V --version ]\n	Displays the Version of the tk-lsi-plugin and the version of StorCLI\n";
-	print "  [ -C <Controller Number> | --controller <Controller Number> ]\n	Specifies a Controller number, defaults to 1\n";
+	print "  [ -C <Controller Number> | --controller <Controller Number> ]\n	Specifies a Controller number, defaults to 0\n";
 	print "  [ -EID | --enclosure ]\n	Specifies one or more Enclosures, defaults to all\n	Takes either an integer as additional argument (>=0) or a comma seperated list(0,1,2,3,...)\n";
 	print "  [ -LD | --logicaldevice ]\n	Specifies one or more Logical Devices, defaults to all\n	Takes either an integer as additional argument (>=0) or a comma seperated list(0,1,2,3,...)\n";
 	print "  [ -PD | --physicaldevice ]\n	Specifies one or more Physical Devices, defaults to all\n	Takes either an integer as additional argument (>=0) or a comma seperated list(0,1,2,3,...)\n";
@@ -93,7 +93,7 @@ http://www.thomas-krenn.com/en/oss/<NOT THERE YET!>
 Send email to the <NOT THERE YET!>-plugin-user mailing list if you have questions regarding
 use of this software, to submit patches, or suggest improvements.
 The mailing list is available at http://lists.thomas-krenn.com/";
-	exit(STATE_UNKNOWN);
+	exit(STATE_OK);
 }
  
 # Prints the Name, Version of the Plugin
@@ -109,6 +109,8 @@ sub displayVersion {
 			print $line;
 		}
 	}
+	print "\n";
+	exit(STATE_OK);
 }
 
 # Returns information about:
@@ -211,6 +213,7 @@ sub getLogicalDeviceStatus {
 	my $storcli = $_[1];
 	my $controller = $_[2];
 	my @logDevices = @{($_[3])};
+	my $action = $_[4];
 
 	my $command = "$sudo $storcli /c$controller ";
 	my $status = 0; # Return Status
@@ -221,36 +224,64 @@ sub getLogicalDeviceStatus {
 		when(1) { $command .= "/v$logDevices[0]"; }
 		default { $command .= "/v".join(",", @logDevices); }
 	}
-	$command .= " show all";
+	$command .= " show $action";
 	my @output = `$command`;
 	#my @output = ("", "Status = Success\n", "/c0/v1 :", "1/1   RAID5 Optl  RW     Yes     RWBD  -   930.0 GB");
 
 	#command successful?
 	if($output[1] eq "Status = Success\n") {
-		my $output_dev = -1;
-		my $flag = -1;
-		foreach my $line (@output) {
-			#/^([a-zA-Z0-9]*)/ erstes wort
-			#/(\s+[a-zA-Z0-9]*)/ zweites wort
-			#/([a-zA-Z0-9]*)$/ letztes wort
-			if($flag > 0) {
-				$flag--;
-			} elsif($line =~ /^\/c$controller\/v([0-9]*)/) {
-				$output_dev = $1;
-				$flag = 6;
+		if($action eq "all") {
+			my $output_dev = -1;
+			my $flag = -1;
+			foreach my $line (@output) {
+				if($flag > 0) {
+					$flag--;
+				} elsif($line =~ /^\/c$controller\/v([0-9]*)/) {
+					$output_dev = $1;
+					$flag = 6;
+				}
+				if($flag eq 0) {
+					$flag = -1;
+					my @values = split(' ',$line);
+					if($values[2] ne "Optl") {
+						if($values[4] eq "Yes") {
+							$status = getExitState($status, STATE_WARNING);
+							if ($VERBOSITY == 0) {$statusMessage .= "Virtual disk state not optimal, "; }
+							if ($VERBOSITY >= 1) {$statusMessage .= "Virtual disk $output_dev state not optimal ($values[2]), "; }
+						} else {
+							$status = getExitState($status, STATE_CRITICAL);
+							if ($VERBOSITY == 0) {$statusMessage .= "Virtual disk not consistant, "; }
+							if ($VERBOSITY >= 1) {$statusMessage .= "Virtual disk $output_dev is not consistant (state $values[2]), "; }
+						}
+					}
+					else {
+						if($values[4] ne "Yes") {
+							$status = getExitState($status, STATE_WARNING);
+							if ($VERBOSITY == 0) {$statusMessage .= "Virtual disk state optimal, but not consistent, "; }
+							if ($VERBOSITY >= 1) {$statusMessage .= "Virtual disk $output_dev state optimal, but not consistent, "; }
+						}
+					}
+				}
 			}
-			if($flag eq 0) {
-				$flag = -1;
-				my @values = split(' ',$line);
-				if($values[2] ne "Optl") {
-					if($values[4] eq "Yes") {
-						$status = getExitState($status, STATE_WARNING);
-						if ($VERBOSITY == 0) {$statusMessage .= "Virtual disk state not optimal, "; }
-						if ($VERBOSITY >= 1) {$statusMessage .= "Virtual disk $output_dev state not optimal ($values[2]), "; }
+		} elsif($action eq "init") {
+			my $output_dev = -1;
+			my $flag = -1;
+			foreach my $line (@output) {
+				if($flag > 0 ) {
+					$flag--;
+				} elsif($line =~ /^VD\ Operation\ Status\ :/) {
+					$flag = 6;
+				}
+				if($flag eq 0) {
+					my @values = split(' ',$line);
+					if($values[0] =~ /^[0-9]*$/) {
+						if($values[3] ne "Not") {
+							$status = getExitState($status, STATE_WARNING);
+							if ($VERBOSITY == 0) {$statusMessage .= "Virtual disk initialization in progress, "; }
+							if ($VERBOSITY >= 1) {$statusMessage .= "Virtual disk $values[0] initialization in progress ($values[2] %), "; }
+						}
 					} else {
-						$status = getExitState($status, STATE_CRITICAL);
-						if ($VERBOSITY == 0) {$statusMessage .= "Virtual disk not consistant, "; }
-						if ($VERBOSITY >= 1) {$statusMessage .= "Virtual disk $output_dev is not consistant (state $values[2]), "; }
+						last;
 					}
 				}
 			}
@@ -296,131 +327,152 @@ sub getPhysDeviceStatus {
 		if($action eq "all") {
 			my $output_enc = -1;
 			my $output_dev = -1;
+			my $flag = -1;
 			foreach my $line (@output) {
-				my $first;
-				my $last;
-				if($line =~ /^Drive\s\/c$controller\/e([0-9]*)\/s([0-9]*)\sState\s\:/) {
+				if($flag > 0) {
+					$flag--;
+				} elsif($line =~ /^Drive\s\/c$controller\/e([0-9]*)\/s([0-9]*)\s\:/) {
+					# Check the overall drive state
 					$output_enc = $1;
 					$output_dev = $2;
-				}
-				if(($output_enc ne -1) && ($output_dev ne -1)) {
-					if($line =~ /^([a-zA-Z0-9\.]*)/) {
-						$first = $1;
-						if($line =~ /([a-zA-Z0-9]*)$/) {
-							$last = $1;
-							given($first) {
-								when("Shield") {
-									if($last ne "0") {
-										$status = getExitState($status, STATE_WARNING);
-										if ($VERBOSITY == 0) {$statusMessage .= "Shield counter (phys. drive) not 0, "; }
-										if ($VERBOSITY == 1) {$statusMessage .= "Physical drive $output_dev: shield counter not 0, "; }
-										if ($VERBOSITY >= 2) {$statusMessage .= "Physical drive $output_dev in enclosure $output_enc: shield counter not 0, "; }
-									}
+					$flag = 6;
+				} elsif($line =~ /^Drive\s\/c$controller\/e([0-9]*)\/s([0-9]*)\sState\s\:/) {
+					# Check the drive state in block Detailed information
+					$output_enc = $1;
+					$output_dev = $2;
+					$flag = 1;
+				} elsif($flag eq 0 && index($line, " ") eq -1) {
+					# Detect the end of the block which was last checked
+					$flag = -1;
+				} elsif($flag eq 0) {
+					my @values = split(' ',$line);
+					if($values[0] =~ /^[0-9]*:[0-9]*/) {
+						# Check the overall drive state
+						if($values[2] eq "Offln") {
+							$status = getExitState($status, STATE_WARNING);
+							if ($VERBOSITY == 0) {$statusMessage .= "Physical drive is offline, "; }
+							if ($VERBOSITY >= 1) {$statusMessage .= "Physical drive $output_dev in enclosure $output_enc is offline, "; }
+						} elsif($values[2] eq "UBad") {
+							$status = getExitState($status, STATE_CRITICAL);
+							if ($VERBOSITY == 0) {$statusMessage .= "Physical drive state is Unconfigured Bad, "; }
+							if ($VERBOSITY >= 1) {$statusMessage .= "Physical drive $output_dev state in enclosure $output_enc is Unconfigured Bad, "; }
+						}
+					} elsif($values[0] =~ /^[a-zA-Z\.]*/) {
+						# Check the drive state in block Detailed information
+						given($values[0]) {
+							when("Shield") {
+								if($values[3] ne "0") {
+									$status = getExitState($status, STATE_WARNING);
+									if ($VERBOSITY == 0) {$statusMessage .= "Shield counter (phys. drive) not 0, "; }
+									if ($VERBOSITY == 1) {$statusMessage .= "Physical drive $output_dev: shield counter not 0, "; }
+									if ($VERBOSITY >= 2) {$statusMessage .= "Physical drive $output_dev in enclosure $output_enc: shield counter not 0, "; }
 								}
-								when("Media") {
-									if($last ne "0") {
-										$status = getExitState($status, STATE_WARNING);
-										if ($VERBOSITY == 0) {$statusMessage .= "Media error count (phys. drive) not 0, "; }
-										if ($VERBOSITY == 1) {$statusMessage .= "Physical drive $output_dev: media error count not 0, "; }
-										if ($VERBOSITY >= 2) {$statusMessage .= "Physical drive $output_dev in enclosure $output_enc: media error count not 0, "; }
-									}
+							}
+							when("Media") {
+								if($values[4] ne "0") {
+									$status = getExitState($status, STATE_WARNING);
+									if ($VERBOSITY == 0) {$statusMessage .= "Media error count (phys. drive) not 0, "; }
+									if ($VERBOSITY == 1) {$statusMessage .= "Physical drive $output_dev: media error count not 0, "; }
+									if ($VERBOSITY >= 2) {$statusMessage .= "Physical drive $output_dev in enclosure $output_enc: media error count not 0, "; }
 								}
-								when("Other") {
-									if($last ne "0") {
-										$status = getExitState($status, STATE_WARNING);
-										if ($VERBOSITY == 0) {$statusMessage .= "Other error count (phys. drive) not 0, "; }
-										if ($VERBOSITY == 1) {$statusMessage .= "Physical drive $output_dev: media error count not 0, "; }
-										if ($VERBOSITY >= 2) {$statusMessage .= "Physical drive $output_dev in enclosure $output_enc: media error count not 0, "; }
-									}
+							}
+							when("Other") {
+								if($values[4] ne "0") {
+									$status = getExitState($status, STATE_WARNING);
+									if ($VERBOSITY == 0) {$statusMessage .= "Other error count (phys. drive) not 0, "; }
+									if ($VERBOSITY == 1) {$statusMessage .= "Physical drive $output_dev: media error count not 0, "; }
+									if ($VERBOSITY >= 2) {$statusMessage .= "Physical drive $output_dev in enclosure $output_enc: media error count not 0, "; }
 								}
-								when("Drive") {
-									if($line =~ /^Drive\sTemperature\s=\s*(-?[0-9]*)C/) {
-										my $temp = $1;
-										my $crit = 0;
-										# check for warn range
-										if($physicalDeviceTemperature_w[0] eq "in") {
-											if(($temp >= $physicalDeviceTemperature_w[1]) && ($temp <= $physicalDeviceTemperature_w[2])) {
-												# is in warn range, so also check if in critical error range
-												if($physicalDeviceTemperature_c[0] eq "in") {
-													if(($temp >= $physicalDeviceTemperature_c[1]) && ($temp <= $physicalDeviceTemperature_c[2])) {
-														# critical error
-														$crit = 1;
-														$status = getExitState($status, STATE_CRITICAL);
-														if ($VERBOSITY == 0) {$statusMessage .= "Phys. drive temperature critical, "; }
-														if ($VERBOSITY == 1) {$statusMessage .= "Physical drive $output_dev: temperature is ${temp}C, "; }
-														if ($VERBOSITY >= 2) {$statusMessage .= "Physical drive $output_dev in enclosure $output_enc: temperature is ${temp}C, "; }
-													}
-												} else {
-													if(($temp < $physicalDeviceTemperature_c[1]) || ($temp > $physicalDeviceTemperature_c[2])) {
-														# critical error
-														$crit = 1;
-														$status = getExitState($status, STATE_CRITICAL);
-														if ($VERBOSITY == 0) {$statusMessage .= "Phys. drive temperature critical, "; }
-														if ($VERBOSITY == 1) {$statusMessage .= "Physical drive $output_dev: temperature is ${temp}C, "; }
-														if ($VERBOSITY >= 2) {$statusMessage .= "Physical drive $output_dev in enclosure $output_enc: temperature is ${temp}C, "; }
-													}
-												}
-												if($crit eq 0) { # only warn if not already given a critical error
-													$status = getExitState($status, STATE_WARNING);
-													if ($VERBOSITY == 0) {$statusMessage .= "Phys. drive temperature warning, "; }
-													if ($VERBOSITY == 1) {$statusMessage .= "Physical drive $output_dev: temperature is ${temp}C, "; }
-													if ($VERBOSITY >= 2) {$statusMessage .= "Physical drive $output_dev in enclosure $output_enc: temperature is ${temp}C, "; }
-												}
+							}
+							when("Drive") {
+								chop($values[3]);
+								my $temp = $values[3];
+								my $crit = 0;
+								# check for warn range
+								if($physicalDeviceTemperature_w[0] eq "in") {
+									if(($temp >= $physicalDeviceTemperature_w[1]) && ($temp <= $physicalDeviceTemperature_w[2])) {
+										# is in warn range, so also check if in critical error range
+										if($physicalDeviceTemperature_c[0] eq "in") {
+											if(($temp >= $physicalDeviceTemperature_c[1]) && ($temp <= $physicalDeviceTemperature_c[2])) {
+												# critical error
+												$crit = 1;
+												$status = getExitState($status, STATE_CRITICAL);
+												if ($VERBOSITY == 0) {$statusMessage .= "Phys. drive temperature critical, "; }
+												if ($VERBOSITY == 1) {$statusMessage .= "Physical drive $output_dev: temperature is ${temp}C, "; }
+												if ($VERBOSITY >= 2) {$statusMessage .= "Physical drive $output_dev in enclosure $output_enc: temperature is ${temp}C, "; }
 											}
 										} else {
-											if(($temp < $physicalDeviceTemperature_w[1]) || ($temp > $physicalDeviceTemperature_w[2])) {
-												# is in warn range, so also check if in critical error range
-												if($physicalDeviceTemperature_c[0] eq "in") {
-													if(($temp >= $physicalDeviceTemperature_c[1]) && ($temp <= $physicalDeviceTemperature_c[2])) {
-														# critical error
-														$crit = 1;
-														$status = getExitState($status, STATE_CRITICAL);
-														if ($VERBOSITY == 0) {$statusMessage .= "Phys. drive temperature critical, "; }
-														if ($VERBOSITY == 1) {$statusMessage .= "Physical drive $output_dev: temperature is ${temp}C, "; }
-														if ($VERBOSITY >= 2) {$statusMessage .= "Physical drive $output_dev in enclosure $output_enc: temperature is ${temp}C, "; }
-													}
-												} else {
-													if(($temp < $physicalDeviceTemperature_c[1]) || ($temp > $physicalDeviceTemperature_c[2])) {
-														# critical error
-														$crit = 1;
-														$status = getExitState($status, STATE_CRITICAL);
-														if ($VERBOSITY == 0) {$statusMessage .= "Phys. drive temperature critical, "; }
-														if ($VERBOSITY == 1) {$statusMessage .= "Physical drive $output_dev: temperature is ${temp}C, "; }
-														if ($VERBOSITY >= 2) {$statusMessage .= "Physical drive $output_dev in enclosure $output_enc: temperature is ${temp}C, "; }
-													}
-												}
-												if($crit eq 0) { # only warn if not already given a critical error
-													$status = getExitState($status, STATE_WARNING);
-													if ($VERBOSITY == 0) {$statusMessage .= "Phys. drive temperature warning, "; }
-													if ($VERBOSITY == 1) {$statusMessage .= "Physical drive $output_dev: temperature is ${temp}C, "; }
-													if ($VERBOSITY >= 2) {$statusMessage .= "Physical drive $output_dev in enclosure $output_enc: temperature is ${temp}C, "; }
-												}
+											if(($temp < $physicalDeviceTemperature_c[1]) || ($temp > $physicalDeviceTemperature_c[2])) {
+												# critical error
+												$crit = 1;
+												$status = getExitState($status, STATE_CRITICAL);
+												if ($VERBOSITY == 0) {$statusMessage .= "Phys. drive temperature critical, "; }
+												if ($VERBOSITY == 1) {$statusMessage .= "Physical drive $output_dev: temperature is ${temp}C, "; }
+												if ($VERBOSITY >= 2) {$statusMessage .= "Physical drive $output_dev in enclosure $output_enc: temperature is ${temp}C, "; }
 											}
+										}
+										if($crit eq 0) { # only warn if not already given a critical error
+											$status = getExitState($status, STATE_WARNING);
+											if ($VERBOSITY == 0) {$statusMessage .= "Phys. drive temperature warning, "; }
+											if ($VERBOSITY == 1) {$statusMessage .= "Physical drive $output_dev: temperature is ${temp}C, "; }
+											if ($VERBOSITY >= 2) {$statusMessage .= "Physical drive $output_dev in enclosure $output_enc: temperature is ${temp}C, "; }
+										}
+									}
+								} else {
+									if(($temp < $physicalDeviceTemperature_w[1]) || ($temp > $physicalDeviceTemperature_w[2])) {
+										# is in warn range, so also check if in critical error range
+										if($physicalDeviceTemperature_c[0] eq "in") {
+											if(($temp >= $physicalDeviceTemperature_c[1]) && ($temp <= $physicalDeviceTemperature_c[2])) {
+												# critical error
+												$crit = 1;
+												$status = getExitState($status, STATE_CRITICAL);
+												if ($VERBOSITY == 0) {$statusMessage .= "Phys. drive temperature critical, "; }
+												if ($VERBOSITY == 1) {$statusMessage .= "Physical drive $output_dev: temperature is ${temp}C, "; }
+												if ($VERBOSITY >= 2) {$statusMessage .= "Physical drive $output_dev in enclosure $output_enc: temperature is ${temp}C, "; }
+											}
+										} else {
+											if(($temp < $physicalDeviceTemperature_c[1]) || ($temp > $physicalDeviceTemperature_c[2])) {
+												# critical error
+												$crit = 1;
+												$status = getExitState($status, STATE_CRITICAL);
+												if ($VERBOSITY == 0) {$statusMessage .= "Phys. drive temperature critical, "; }
+												if ($VERBOSITY == 1) {$statusMessage .= "Physical drive $output_dev: temperature is ${temp}C, "; }
+												if ($VERBOSITY >= 2) {$statusMessage .= "Physical drive $output_dev in enclosure $output_enc: temperature is ${temp}C, "; }
+											}
+										}
+										if($crit eq 0) { # only warn if not already given a critical error
+											$status = getExitState($status, STATE_WARNING);
+											if ($VERBOSITY == 0) {$statusMessage .= "Phys. drive temperature warning, "; }
+											if ($VERBOSITY == 1) {$statusMessage .= "Physical drive $output_dev: temperature is ${temp}C, "; }
+											if ($VERBOSITY >= 2) {$statusMessage .= "Physical drive $output_dev in enclosure $output_enc: temperature is ${temp}C, "; }
 										}
 									}
 								}
-								when("Predictive") {
-									if($last ne "0") {
-										$status = getExitState($status, STATE_WARNING);
-										if ($VERBOSITY == 0) {$statusMessage .= "Phys. drive Predictive Fail Count not 0, "; }
-										if ($VERBOSITY == 1) {$statusMessage .= "Physical drive $output_dev: Predictive Fail Count not 0, "; }
-										if ($VERBOSITY >= 2) {$statusMessage .= "Physical drive $output_dev in enclosure $output_enc: Predictive Fail Count not 0, "; }
-									}
+							}
+							when("Predictive") {
+								if($values[4] ne "0") {
+									$status = getExitState($status, STATE_WARNING);
+									if ($VERBOSITY == 0) {$statusMessage .= "Phys. drive Predictive Fail Count not 0, "; }
+									if ($VERBOSITY == 1) {$statusMessage .= "Physical drive $output_dev: Predictive Fail Count not 0, "; }
+									if ($VERBOSITY >= 2) {$statusMessage .= "Physical drive $output_dev in enclosure $output_enc: Predictive Fail Count not 0, "; }
 								}
-								when("S.M.A.R.T") {
-									if($last ne "No") {
-										$status = getExitState($status, STATE_WARNING);
-										if ($VERBOSITY == 0) {$statusMessage .= "S.M.A.R.T alert flagged by drive, "; }
-										if ($VERBOSITY == 1) {$statusMessage .= "Physical drive $output_dev: S.M.A.R.T alert flagged, "; }
-										if ($VERBOSITY >= 2) {$statusMessage .= "Physical drive $output_dev in enclosure $output_enc: S.M.A.R.T alert flagged, "; }
-									}
+							}
+							when("S.M.A.R.T") {
+								if($values[6] ne "No") {
+									$status = getExitState($status, STATE_WARNING);
+									if ($VERBOSITY == 0) {$statusMessage .= "S.M.A.R.T alert flagged by drive, "; }
+									if ($VERBOSITY == 1) {$statusMessage .= "Physical drive $output_dev: S.M.A.R.T alert flagged, "; }
+									if ($VERBOSITY >= 2) {$statusMessage .= "Physical drive $output_dev in enclosure $output_enc: S.M.A.R.T alert flagged, "; }
 								}
 							}
 						}
+					} else {
+						$flag = -1;
 					}
 				}
 			}
 		} else {
+			# Check initialization or rebuild output
 			my $output_enc = -1;
 			my $output_dev = -1;
 			foreach my $line (@output) {
@@ -642,36 +694,14 @@ MAIN: {
 	my @enclosures;
 	my @logDevices;
 	my @physDevices;
- 	my @temperature_w;
+	my @temperature_w;
 	my @temperature_c;
 	my @physicalDeviceTemperature_w;
 	my @physicalDeviceTemperature_c;
 	my $bbu = 1;
 	my $platform = $^O;
- 	my $statusMessage = '';
+	my $statusMessage = '';
 	
-	if ( !(GetOptions(
-		'h|help' => sub {displayHelp();},
-		'v|verbose' => sub {$VERBOSITY = 1 },
-		'vv' => sub {$VERBOSITY = 2},
-		'vvv' => sub {$VERBOSITY = 3},
-		'V|version' => sub {displayVersion($sudo, $storcli);},
-		'C|controller=i' => \$controller,
-		'EID|enclosure=s' => \@enclosures,
-		'LD|logicaldevice=s' => \@logDevices,
-		'PD|physicaldevice=s' => \@physDevices, 
-		'Tw|temperature-warn=s' => \@temperature_w,
-		'Tc|temperature-critical=s' => \@temperature_c,
-		'PDTw|physicaldevicetemperature-warn=s' => \@physicalDeviceTemperature_w,
-		'PDTc|physicaldevicetemperature-critical=s' => \@physicalDeviceTemperature_c,
-		'p|path=s' => \$storcli,
-		'b|BBU=i' => \$bbu
-	)))	{
-		print $NAME . " Version: " . $VERSION ."\n";
-		displayUsage();
-		exit(STATE_UNKNOWN);
-	}
-
 	# Check platform
 	if ($platform eq 'linux') {
 		chomp($sudo = `which sudo`);
@@ -706,15 +736,37 @@ MAIN: {
 		}
 	}
 
- 	# Input validation
- 	my @controllerVersion = `$sudo $storcli /c$controller show all`;
+	if ( !(GetOptions(
+		'h|help' => sub {displayHelp();},
+		'v|verbose' => sub {$VERBOSITY = 1 },
+		'vv' => sub {$VERBOSITY = 2},
+		'vvv' => sub {$VERBOSITY = 3},
+		'V|version' => sub {displayVersion($sudo, $storcli);},
+		'C|controller=i' => \$controller,
+		'EID|enclosure=s' => \@enclosures,
+		'LD|logicaldevice=s' => \@logDevices,
+		'PD|physicaldevice=s' => \@physDevices, 
+		'Tw|temperature-warn=s' => \@temperature_w,
+		'Tc|temperature-critical=s' => \@temperature_c,
+		'PDTw|physicaldevicetemperature-warn=s' => \@physicalDeviceTemperature_w,
+		'PDTc|physicaldevicetemperature-critical=s' => \@physicalDeviceTemperature_c,
+		'p|path=s' => \$storcli,
+		'b|BBU=i' => \$bbu
+	)))	{
+		print $NAME . " Version: " . $VERSION ."\n";
+		displayUsage();
+		exit(STATE_UNKNOWN);
+	}
+
+	# Input validation
+	my @controllerVersion = `$sudo $storcli /c$controller show all`;
 	#my @controllerVersion = ("", "", "Description = None\n");
- 	if($controllerVersion[2] eq "Description = Controller $controller not found\n") {
- 		print "Invalid controller number, device not found!";
- 		exit(STATE_UNKNOWN);
- 	}
+	if($controllerVersion[2] eq "Description = Controller $controller not found\n") {
+		print "Invalid controller number, device not found!\n";
+		exit(STATE_UNKNOWN);
+	}
 	if(($bbu ne "1") && ($bbu ne "0")) {
-		print "Invalid BBU parameter, must be 0 or 1!";
+		print "Invalid BBU parameter, must be 0 or 1!\n";
 		exit(STATE_UNKNOWN);
 	} else {
 		if($bbu eq "1") {
@@ -759,7 +811,10 @@ MAIN: {
 	($newexitstatus, $statusMessage) = getControllerStatus($sudo, $storcli, $controller, \@temperature_w, \@temperature_c);
 	$newstatusMessage .= $statusMessage;
 	$exitstatus = getExitState($newexitstatus, $exitstatus);
-	($newexitstatus, $statusMessage) = getLogicalDeviceStatus($sudo, $storcli, $controller, \@logDevices);
+	($newexitstatus, $statusMessage) = getLogicalDeviceStatus($sudo, $storcli, $controller, \@logDevices, "init");
+	$newstatusMessage .= $statusMessage;
+	$exitstatus = getExitState($newexitstatus, $exitstatus);
+	($newexitstatus, $statusMessage) = getLogicalDeviceStatus($sudo, $storcli, $controller, \@logDevices, "all");
 	$newstatusMessage .= $statusMessage;
 	$exitstatus = getExitState($newexitstatus, $exitstatus);
 	($newexitstatus, $statusMessage) = getPhysDeviceStatus($sudo, $storcli, $controller, \@enclosures, \@physDevices, \@physicalDeviceTemperature_w, \@physicalDeviceTemperature_c, "initialization");
