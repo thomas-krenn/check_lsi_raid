@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 # ======================================================================================
-# $Id$
+# $Id: check_lsi_raid | Thu May 2 20:38:21 2013 +0200 | Alexander Scheipner  $
 # check_lsi_raid: Nagios/Icinga plugin to check LSI Raid Controller status
 # --------------------------------------------------------------------------------------
 # Created as part of a semester project at the University of Applied Sciences Hagenberg
@@ -31,8 +31,12 @@ use feature qw/switch/; #später durch nachfolgende Zeile ersetzen, da wir noch m
 #use Switch 'Perl6'; 
 
 our $VERBOSITY = 0;
-our $VERSION = "0.2";
+our $VERSION = "0.3";
 our $NAME = "check_lsi_raid: Nagios/Icinga plugin to check LSI Raid Controller status";
+our $C_TEMP_WARNING = 60;
+our $C_TEMP_CRITICAL = 65;
+our $PD_TEMP_WARNING = 40;
+our $PD_TEMP_CRITICAL = 45;
 
 use constant { 
 	STATE_OK => 0,
@@ -69,12 +73,12 @@ sub displayUsage {
 	print "  [ -EID | --enclosure ]\n	Specifies one or more Enclosures, defaults to all\n	Takes either an integer as additional argument (>=0) or a comma seperated list(0,1,2,3,...)\n";
 	print "  [ -LD | --logicaldevice ]\n	Specifies one or more Logical Devices, defaults to all\n	Takes either an integer as additional argument (>=0) or a comma seperated list(0,1,2,3,...)\n";
 	print "  [ -PD | --physicaldevice ]\n	Specifies one or more Physical Devices, defaults to all\n	Takes either an integer as additional argument (>=0) or a comma seperated list(0,1,2,3,...)\n";
-	print "  [ -Tw | --temperature-warn ]\n	Specifies the RAID-Controller temperature warning range, default is 40C or more\n";
-	print "  [ -Tc | --temperature-critical ]\n	Specifies the RAID-Controller temperature critical error range, default is 50C or more\n";
-	print "  [ -PDTw | --physicaldevicetemperature-warn ]\n	Specifies the disk temperature warning range, default is 40C or more\n";
-	print "  [ -PDTc | --physicaldevicetemperature-critical ]\n	Specifies the disk temperature critical error range, default is 45C or more\n";
+	print "  [ -Tw | --temperature-warn ]\n	Specifies the RAID-Controller temperature warning range, default is ${C_TEMP_WARNING}C or more\n";
+	print "  [ -Tc | --temperature-critical ]\n	Specifies the RAID-Controller temperature critical error range, default is ${C_TEMP_CRITICAL}C or more\n";
+	print "  [ -PDTw | --physicaldevicetemperature-warn ]\n	Specifies the disk temperature warning range, default is ${PD_TEMP_WARNING}C or more\n";
+	print "  [ -PDTc | --physicaldevicetemperature-critical ]\n	Specifies the disk temperature critical error range, default is ${PD_TEMP_CRITICAL}C or more\n";
 	print "  [ -p <path> | --path <path>]\n	Specifies the path to StorCLI, default is /usr/bin/storcli or C:\\Programme\\...\\storcli.exe\n";
-	print "  [ -b <0/1> | BBU <0/1> ]\n	Boolean Value which specifies if an Battery Backup Unit is Present (1 is present/0 is not Present). Default is 1\n	This option is only needed if you have an LSI-Raid Controller without a Battery Backup Unit.";
+	print "  [ -b <0/1> | BBU <0/1> ]\n	Boolean Value which specifies if an Battery Backup Unit is present (1 is present/0 is not present). Default is 1\n	This option is only needed if you have an LSI-Raid Controller without a Battery Backup Unit.\n";
 }
 
 # Displays a short Help text for the user
@@ -90,7 +94,7 @@ sub displayHelp {
 http://www.thomas-krenn.com/en/oss/<NOT THERE YET!>
 Send email to the <NOT THERE YET!>-plugin-user mailing list if you have questions regarding
 use of this software, to submit patches, or suggest improvements.
-The mailing list is available at http://lists.thomas-krenn.com/";
+The mailing list is available at http://lists.thomas-krenn.com/\n";
 	exit(STATE_OK);
 }
  
@@ -130,13 +134,15 @@ sub getControllerStatus {
 		foreach my $line (@output) {
 			my $first;
 			my $last;
+			my $temp;
+			my $crit = 0;
 			if($line =~ /^([a-zA-Z0-9]*)/) {
 				$first = $1;
 				if($line =~ /([a-zA-Z0-9]*)$/) {
 					$last = $1;
 					given($first) {
 						when("Controller") {
-							if($line =~ /(\s+[a-zA-Z0-9]*)/) {
+							if($line =~ /\s+([a-zA-Z0-9]*)/) {
 								given($1) {
 									when("Status") {
 										if($last ne "OK") {
@@ -222,7 +228,7 @@ sub getControllerStatus {
 							}
 						}
 						when("ROC") {
-							if($line =~ /(\s+[a-zA-Z0-9]*)/) {
+							if($line =~ /\s+([a-zA-Z0-9]*)/) {
 								if($1 eq "temperature") {
 									$temp = $last;
 									if($temperature_w[0] eq "in") {
@@ -648,7 +654,7 @@ sub getBBUStatus {
 					if ($blockid eq 1) {
 						given($first) {
 							when("Battery") {
-								if($line =~ /(\s+[a-zA-Z0-9]*)/) {
+								if($line =~ /\s+([a-zA-Z0-9]*)/) {
 									given($1) {
 										when("State") {
 											if($last ne "Optimal") {
@@ -672,7 +678,7 @@ sub getBBUStatus {
 								}
 							}
 							when("Battery") {
-								if($line =~ /(\s+[a-zA-Z0-9]*)/) {
+								if($line =~ /\s+([a-zA-Z0-9]*)/) {
 									given($1) {
 										when("State") {
 											if($last ne "Optimal") {
@@ -726,7 +732,7 @@ sub getBBUStatus {
 					if ($blockid eq 3) {
 						given($first) {
 							when("Over") {
-								if($line =~ /(\s+[a-zA-Z0-9]*)/) {
+								if($line =~ /\s+([a-zA-Z0-9]*)/) {
 									if($1 eq "Temperature") {
 										if($last ne "No") {
 											$status = getExitState($status, STATE_CRITICAL);
@@ -916,10 +922,10 @@ MAIN: {
 	@enclosures = split(/,/,join(',', @enclosures));
 	@logDevices = split(/,/,join(',', @logDevices));
 	@physDevices = split(/,/,join(',', @physDevices));
-	@temperature_w = getThresholds(\@temperature_w, 50); # 50 = default value
-	@temperature_c = getThresholds(\@temperature_c, 60);
-	@physicalDeviceTemperature_w = getThresholds(\@physicalDeviceTemperature_w, 40);
-	@physicalDeviceTemperature_c = getThresholds(\@physicalDeviceTemperature_c, 45);
+	@temperature_w = getThresholds(\@temperature_w, $C_TEMP_WARNING);
+	@temperature_c = getThresholds(\@temperature_c, $C_TEMP_CRITICAL);
+	@physicalDeviceTemperature_w = getThresholds(\@physicalDeviceTemperature_w, $PD_TEMP_WARNING);
+	@physicalDeviceTemperature_c = getThresholds(\@physicalDeviceTemperature_c, $PD_TEMP_CRITICAL);
 
 	# Set exit status
 	my $exitstatus = 0;
