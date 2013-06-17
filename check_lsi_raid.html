@@ -1,0 +1,167 @@
+<?xml version="1.0" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title></title>
+<meta http-equiv="content-type" content="text/html; charset=utf-8" />
+<link rev="made" href="mailto:" />
+</head>
+
+<body style="background-color: white">
+
+
+
+<ul id="index">
+  <li><a href="#NAME">NAME</a></li>
+  <li><a href="#SYNOPSIS">SYNOPSIS</a></li>
+  <li><a href="#VERSION">VERSION</a></li>
+  <li><a href="#DESCRIPTION">DESCRIPTION</a></li>
+  <li><a href="#DEPENDENCIES">DEPENDENCIES</a></li>
+  <li><a href="#METHODS">METHODS</a>
+    <ul>
+      <li><a href="#getExitState">getExitState</a></li>
+      <li><a href="#displayUsage">displayUsage</a></li>
+      <li><a href="#displayHelp">displayHelp</a></li>
+      <li><a href="#displayVersion">displayVersion</a></li>
+      <li><a href="#getControllerStatus">getControllerStatus</a></li>
+      <li><a href="#getLogicalDeviceStatus">getLogicalDeviceStatus</a></li>
+      <li><a href="#getPhysDeviceStatus">getPhysDeviceStatus</a></li>
+      <li><a href="#getBBUStatus">getBBUStatus</a></li>
+      <li><a href="#getThresholds">getThresholds</a>
+        <ul>
+          <li><a href="#Examples">Examples</a></li>
+        </ul>
+      </li>
+    </ul>
+  </li>
+  <li><a href="#LICENSE-AND-COPYRIGHT">LICENSE AND COPYRIGHT</a></li>
+  <li><a href="#DISCLAIMER-OF-WARRANTY">DISCLAIMER OF WARRANTY</a></li>
+</ul>
+
+<h1 id="NAME">NAME</h1>
+
+<p><b>check_lsi_raid</b> - Nagios/Icinga Plugin to check LSI raid-controllers.</p>
+
+<h1 id="SYNOPSIS">SYNOPSIS</h1>
+
+<p>Example:</p>
+
+<pre><code><code>        ./check_lsi_raid -Tw 40 -Tc 50 -LD 0,1 -PD 1 -b 0
+        LSIRAID OK (Ctrl #0)</code></code></pre>
+
+<h1 id="VERSION">VERSION</h1>
+
+<p>This document describes check_lsi_raid version <b>0.3</b>.</p>
+
+<h1 id="DESCRIPTION">DESCRIPTION</h1>
+
+<p>check_lsi_raid is a Nagios/Icinga Plugin to check LSI raid-controllers for errors/warnings. This plugin makes heavy use of <b>StorCLI</b> which can be obtained from the LSI homepage. It checks the controller, the physical devices and the logical devices seperately for errors or warnings (for more detailed information about what is beeing monitored see METHODS).</p>
+
+<h1 id="DEPENDENCIES">DEPENDENCIES</h1>
+
+<pre><code><code>        <span class="operator">-</span> <span class="variable">This</span> <span class="variable">plugin</span> <span class="variable">requires</span> <span class="variable">a</span> <span class="variable">running</span> <span class="variable">Nagios</span> <span class="keyword">or</span> <span class="variable">Icinga</span> <span class="operator">(</span><span class="variable">either</span> <span class="keyword">local</span> <span class="keyword">or</span> <span class="variable">NRPE</span><span class="operator">).</span>
+        <span class="operator">-</span> <span class="variable">sudo</span>
+        <span class="operator">-</span> <span class="variable">storcli</span><span class="operator">/</span><span class="variable">storcli64</span> <span class="operator">(</span><span class="variable">Can</span> <span class="variable">be</span> <span class="variable">obtained</span> <span class="variable">from</span> <span class="variable">the</span> <span class="variable">LSI</span> <span class="variable">homepage</span><span class="operator">)</span>
+        <span class="operator">-</span> <span class="variable">The</span> <span class="variable">following</span> <span class="variable">Perl</span> <span class="variable">Modules</span><span class="operator">:</span>
+        
+        <span class="keyword">use</span> <span class="variable">strict</span><span class="operator">;</span>
+        <span class="keyword">use</span> <span class="variable">warnings</span><span class="operator">;</span>
+        <span class="keyword">use</span> <span class="variable">Getopt::Long</span> <span class="string">qw(:config no_ignore_case)</span><span class="operator">;</span>
+        <span class="keyword">use</span> <span class="variable">Switch</span> <span class="string">'Perl6'</span><span class="operator">;</span>
+</code></code></pre>
+
+<h1 id="METHODS">METHODS</h1>
+
+<h2 id="getExitState">getExitState</h2>
+
+<p>Returns the correct exit code after each test. Can only increment the exit-code (if necessary) since the exit-code may not change from Warning to OK.</p>
+
+<h2 id="displayUsage">displayUsage</h2>
+
+<p>Explains the usage of the plugin and which parameters are available.</p>
+
+<h2 id="displayHelp">displayHelp</h2>
+
+<p>Prints a short help text and quick information where to find additional help.</p>
+
+<h2 id="displayVersion">displayVersion</h2>
+
+<p>Prints the plugin version and the StorCLI version.</p>
+
+<h2 id="getControllerStatus">getControllerStatus</h2>
+
+<p>Checks the LSI raid-controller for controller errors (uses <b>storcli /c[num] show all</b>).</p>
+
+<pre><code><code>        - Overall status
+        - Reboot necessary?
+        - Booted in safe mode?
+        - Memory errors
+        - Failed to get lock key?
+        - Rollback operation in progress?
+        - Temperature of controller and/or ROC (if present)</code></code></pre>
+
+<p>The controller/ROC temperature can be set to a warning (parameter: <b>-Tw</b>|<b>--temperature-warn</b>) and a critical level (parameter: <b>-Tc</b>|<b>--temperature-critical</b>). See getThresholds for more information.</p>
+
+<h2 id="getLogicalDeviceStatus">getLogicalDeviceStatus</h2>
+
+<p>Returns information about logical devices:</p>
+
+<pre><code><code>        - General logical devices status
+
+        - Initialization in progress?</code></code></pre>
+
+<h2 id="getPhysDeviceStatus">getPhysDeviceStatus</h2>
+
+<p>Returns information about physical devices attached to the LSI raid-controller:</p>
+
+<pre><code><code>        - Disk status
+        - Several error counts
+        - Device temperature
+        - Predictive fail count
+        - S.M.A.R.T. status</code></code></pre>
+
+<p>The device temperature can be set to a warning (parameter: <b>-PDTw</b>|<b>--physicaldevicetemperature-warn</b>) and a critical level (parameter: <b>-PDTc</b>|<b>--physicaldevicetemperature-critical</b>). See getThresholds for more information.</p>
+
+<h2 id="getBBUStatus">getBBUStatus</h2>
+
+<p>Returns information about the battery backup unit (BBU) status.</p>
+
+<pre><code><code>        - Overall status
+        - Temperature status
+        - Bad voltage
+        - Learn cycle status
+        - I2C errors
+        - Capacity</code></code></pre>
+
+<h2 id="getThresholds">getThresholds</h2>
+
+<p>Uses the <b>-Tw</b>|<b>--temperature-warn</b> and <b>-Tc</b>|<b>--temperature-critical</b> parameters and parses them. Uses correct Nagios Threshold implementation: <a href="http://nagiosplug.sourceforge.net/developer-guidelines.html#THRESHOLDFORMAT">http://nagiosplug.sourceforge.net/developer-guidelines.html#THRESHOLDFORMAT</a> Returns a temperature range (array) in or out which a temperature should be. Array content: (&quot;in&quot; or &quot;out&quot;, range from, range to).</p>
+
+<h3 id="Examples">Examples</h3>
+
+<pre><code><code>        <span class="variable">Generate</span> <span class="variable">an</span> <span class="variable">alert</span> <span class="keyword">if</span> <span class="operator">x...</span>
+        <span class="operator">-</span><span class="variable">Tw</span> <span class="number">10</span>          <span class="operator">&lt;</span> <span class="number">0</span> <span class="keyword">or</span> <span class="operator">&gt;</span> <span class="number">10</span><span class="operator">,</span> <span class="operator">(</span><span class="variable">outside</span> <span class="variable">the</span> <span class="variable">range</span> <span class="variable">of</span> <span class="operator">{</span><span class="number">0</span> <span class="operator">..</span> <span class="number">10</span><span class="operator">})</span>
+        <span class="operator">-</span><span class="variable">Tw</span> <span class="number">10</span><span class="operator">:</span>         <span class="operator">&lt;</span> <span class="number">10</span><span class="operator">,</span> <span class="operator">(</span><span class="variable">outside</span> <span class="operator">{</span><span class="number">10</span> <span class="operator">..</span> <span class="variable">inf</span><span class="operator">})</span>
+        <span class="operator">-</span><span class="variable">Tw</span> <span class="operator">~:</span><span class="number">10</span>        <span class="operator">&gt;</span> <span class="number">10</span><span class="operator">,</span> <span class="operator">(</span><span class="variable">outside</span> <span class="variable">the</span> <span class="variable">range</span> <span class="variable">of</span> <span class="operator">{-</span><span class="variable">inf</span> <span class="operator">..</span> <span class="number">10</span><span class="operator">})</span>
+        <span class="operator">-</span><span class="variable">Tw</span> <span class="number">10</span><span class="operator">:</span><span class="number">20</span>       <span class="operator">&lt;</span> <span class="number">10</span> <span class="keyword">or</span> <span class="operator">&gt;</span> <span class="number">20</span><span class="operator">,</span> <span class="operator">(</span><span class="variable">outside</span> <span class="variable">the</span> <span class="variable">range</span> <span class="variable">of</span> <span class="operator">{</span><span class="number">10</span> <span class="operator">..</span> <span class="number">20</span><span class="operator">})</span>
+        <span class="operator">-</span><span class="variable">Tw</span> <span class="variable">@10</span><span class="operator">:</span><span class="number">20</span>      <span class="operator">&gt;=</span> <span class="number">10</span> <span class="keyword">and</span> <span class="operator">&lt;=</span> <span class="number">20</span><span class="operator">,</span> <span class="operator">(</span><span class="variable">inside</span> <span class="variable">the</span> <span class="variable">range</span> <span class="variable">of</span> <span class="operator">{</span><span class="number">10</span> <span class="operator">..</span> <span class="number">20</span><span class="operator">})</span>
+</code></code></pre>
+
+<h1 id="LICENSE-AND-COPYRIGHT">LICENSE AND COPYRIGHT</h1>
+
+<p>Copyright (c) 2013, Martin Grubhofer <code><code>&lt;mgrubhofer@thomas-krenn.com&gt;</code></code>, <code><code>&lt;s1110239013@students.fh-hagenberg.at&gt;</code></code>, Scheipner Alexander <code><code>&lt;s1110239032@students.fh-hagenberg.at&gt;</code></code>, Werner Sebastian <code><code>&lt;s1110239038@students.fh-hagenberg.at&gt;</code></code>. All rights reserved.</p>
+
+<p>This program is free software; you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation; either version 3 of the License, or (at your option) any later version.</p>
+
+<h1 id="DISCLAIMER-OF-WARRANTY">DISCLAIMER OF WARRANTY</h1>
+
+<p>BECAUSE THIS SOFTWARE IS LICENSED FREE OF CHARGE, THERE IS NO WARRANTY FOR THE SOFTWARE, TO THE EXTENT PERMITTED BY APPLICABLE LAW. EXCEPT WHEN OTHERWISE STATED IN WRITING THE COPYRIGHT HOLDERS AND/OR OTHER PARTIES PROVIDE THE SOFTWARE &quot;AS IS&quot; WITHOUT WARRANTY OF ANY KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE. THE ENTIRE RISK AS TO THE QUALITY AND PERFORMANCE OF THE SOFTWARE IS WITH YOU. SHOULD THE SOFTWARE PROVE DEFECTIVE, YOU ASSUME THE COST OF ALL NECESSARY SERVICING, REPAIR, OR CORRECTION.</p>
+
+<p>IN NO EVENT UNLESS REQUIRED BY APPLICABLE LAW OR AGREED TO IN WRITING WILL ANY COPYRIGHT HOLDER, OR ANY OTHER PARTY WHO MAY MODIFY AND/OR REDISTRIBUTE THE SOFTWARE AS PERMITTED BY THE ABOVE LICENCE, BE LIABLE TO YOU FOR DAMAGES, INCLUDING ANY GENERAL, SPECIAL, INCIDENTAL, OR CONSEQUENTIAL DAMAGES ARISING OUT OF THE USE OR INABILITY TO USE THE SOFTWARE (INCLUDING BUT NOT LIMITED TO LOSS OF DATA OR DATA BEING RENDERED INACCURATE OR LOSSES SUSTAINED BY YOU OR THIRD PARTIES OR A FAILURE OF THE SOFTWARE TO OPERATE WITH ANY OTHER SOFTWARE), EVEN IF SUCH HOLDER OR OTHER PARTY HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.</p>
+
+
+</body>
+
+</html>
+
+

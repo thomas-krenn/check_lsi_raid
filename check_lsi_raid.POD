@@ -1,6 +1,6 @@
 =head1 NAME
 
-check_lsi_raid - nagios/icinga plugin to check lsi raid-controllers
+B<check_lsi_raid> - Nagios/Icinga Plugin to check LSI raid-controllers.
 
 =head1 SYNOPSIS
 
@@ -11,24 +11,21 @@ Example:
 
 =head1 VERSION
 
-This document describes check_lsi_raid version 0.2
+This document describes check_lsi_raid version B<0.3>.
 
 =head1 DESCRIPTION
 
 check_lsi_raid is a Nagios/Icinga Plugin to check LSI raid-controllers for errors/warnings.
-This plugin makes heavy use of 'StorCLI' which can be obtained from the LSI homepage.
+This plugin makes heavy use of B<StorCLI> which can be obtained from the LSI homepage.
 It checks the controller, the physical devices and the logical devices seperately for errors or warnings
 (for more detailed information about what is beeing monitored see METHODS).
 
 =head1 DEPENDENCIES
 
-- This plugin requires a running Nagios or Icinga. (either local or NRPE)
-
-- sudo
-
-- storcli/storcli64 (Can be obtained from the LSI homepage)
-
-- The following Perl Modules:
+	- This plugin requires a running Nagios or Icinga (either local or NRPE).
+	- sudo
+	- storcli/storcli64 (Can be obtained from the LSI homepage)
+	- The following Perl Modules:
 
 	use strict;
 	use warnings;
@@ -56,88 +53,70 @@ Prints the plugin version and the StorCLI version.
 
 =head2 getControllerStatus
 
-Checks the LSI raid-controller for controller errors. (uses storcli /c<num> show all)
+Checks the LSI raid-controller for controller errors (uses B<storcli /c[num] show all>).
 
-- Overall status
+	- Overall status
+	- Reboot necessary?
+	- Booted in safe mode?
+	- Memory errors
+	- Failed to get lock key?
+	- Rollback operation in progress?
+	- Temperature of controller and/or ROC (if present)
 
-- Reboot necessary?
-
-- Booted in safe mode?
-
-- Memory errors
-
-- Failed to get lock key?
-
-- Rollback operation in progress?
-
-- Temperature of controller and/or ROC (if present)
-
-The controller/ROC temperature can be set to a warning (parameter: -Tw|--temperature-warn) and a critical level (parameter: -Tc|--temperature-critical). See getThresholds for more information.
+The controller/ROC temperature can be set to a warning (parameter: B<-Tw>|B<--temperature-warn>) and a critical level (parameter: B<-Tc>|B<--temperature-critical>). See getThresholds for more information.
 
 =head2 getLogicalDeviceStatus
 
 Returns information about logical devices:
 
-- General logical devices status
+	- General logical devices status
 
-- Initialization in progress?
+	- Initialization in progress?
 
 =head2 getPhysDeviceStatus
 
 Returns information about physical devices attached to the LSI raid-controller:
 
-- Disk status
+	- Disk status
+	- Several error counts
+	- Device temperature
+	- Predictive fail count
+	- S.M.A.R.T. status
 
-- Several error counts
-
-- Device temperature
-
-- Predictive fail count
-
-- S.M.A.R.T. status
-
-The device temperature can be set to a warning (parameter: -PDTw|--physicaldevicetemperature-warn) and a critical level (parameter: -PDTc|--physicaldevicetemperature-critical). See getThresholds for more information.
+The device temperature can be set to a warning (parameter: B<-PDTw>|B<--physicaldevicetemperature-warn>) and a critical level (parameter: B<-PDTc>|B<--physicaldevicetemperature-critical>). See getThresholds for more information.
 
 =head2 getBBUStatus
 
-Returns information about the battery backup unit (BBU) status
+Returns information about the battery backup unit (BBU) status.
 
-- Overall status
-
-- Temperature status
-
-- Bad voltage
-
-- Learn cycle status
-
-- I2C errors
-
-- Capacity
+	- Overall status
+	- Temperature status
+	- Bad voltage
+	- Learn cycle status
+	- I2C errors
+	- Capacity
 
 =head2 getThresholds
 
-Uses the -Tw --temperature-warn and -Tc --temperature-critical parameters and parses them
-
+Uses the B<-Tw>|B<--temperature-warn> and B<-Tc>|B<--temperature-critical> parameters and parses them.
 Uses correct Nagios Threshold implementation: L<http://nagiosplug.sourceforge.net/developer-guidelines.html#THRESHOLDFORMAT>
-
-Returns a temperature range (array) in or out which a temperature should be
-
-Array content: ("in" or "out", range from, range to)
+Returns a temperature range (array) in or out which a temperature should be.
+Array content: ("in" or "out", range from, range to).
 
 =head3 Examples
 
-Generate an alert if x...
--Tw 10		< 0 or > 10, (outside the range of {0 .. 10})
--Tw 10:		< 10, (outside {10 .. inf})
--Tw ~:10	> 10, (outside the range of {-inf .. 10})
--Tw 10:20	< 10 or > 20, (outside the range of {10 .. 20})
--Tw @10:20	>= 10 and <= 20, (inside the range of {10 .. 20})
+	Generate an alert if x...
+	-Tw 10		< 0 or > 10, (outside the range of {0 .. 10})
+	-Tw 10:		< 10, (outside {10 .. inf})
+	-Tw ~:10	> 10, (outside the range of {-inf .. 10})
+	-Tw 10:20	< 10 or > 20, (outside the range of {10 .. 20})
+	-Tw @10:20	>= 10 and <= 20, (inside the range of {10 .. 20})
 
 =head1 LICENSE AND COPYRIGHT
 
-Copyright (c) 2013,
-Martin Grubhofer C<< <mgrubhofer@thomas-krenn.com> >>, C<< <s1110239013@students.fh-hagenberg.at> >>.
-Scheipner Alexander C<< <s1110239032@students.fh-hagenberg.at> >>.
+Copyright (c) 2013, 
+Martin Grubhofer C<< <mgrubhofer@thomas-krenn.com> >>, C<< <s1110239013@students.fh-hagenberg.at> >>, 
+Scheipner Alexander C<< <s1110239032@students.fh-hagenberg.at> >>, 
 Werner Sebastian C<< <s1110239038@students.fh-hagenberg.at> >>.
 All rights reserved.
 

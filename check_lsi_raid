@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 # ======================================================================================
-# $Id: check_lsi_raid | Thu May 2 20:38:21 2013 +0200 | Alexander Scheipner  $
+# $Id$
 # check_lsi_raid: Nagios/Icinga plugin to check LSI Raid Controller status
 # --------------------------------------------------------------------------------------
 # Created as part of a semester project at the University of Applied Sciences Hagenberg
