@@ -1,0 +1,53 @@
+                            check_lsi_raid
+                            ==============
+
+ check_lsi_raid: Nagios/Icinga plugin to check LSI RAID Controllers
+
+ Copyright (C) 2009-2013 Thomas-Krenn.AG
+
+ This program is free software; you can redistribute it and/or modify it under
+ the terms of the GNU General Public License as published by the Free Software
+ Foundation; either version 3 of the License, or (at your option) any later
+ version.
+ 
+ This program is distributed in the hope that it will be useful, but WITHOUT
+ ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
+ details.
+ 
+ You should have received a copy of the GNU General Public License along with
+ this program; if not, see <http://www.gnu.org/licenses/>.
+
+ General:
+ --------
+   o The LSI RAID Monitoring Plugin is a Nagios/Icinga checks the LSI RAID Controller for warnings or critical errors.
+   o It is written in Perl and uses the Storage Command Line Tool ("Storcli") to interact with the RAID Controller.
+
+ Current Version:
+ ----------------
+   o The current version of the check_lsi_raid plugin is available at the Thomas-Krenn.AG git-server:
+   o http://git.thomas-krenn.com/check_lsi_raid.git
+
+ Functionalities:
+ ----------------
+   o Checks the Controller Status,
+   o Physical Device Status,
+   o Logical Device Status and
+   o BBU Status
+
+ Requirements:
+ -------------
+   o On the system to be monitored:
+     + check_lsi_raid plugin
+     + storcli
+     + sudoers entry for user nagios and storcli (example: nagios ALL=(root) NOPASSWD:/usr/sbin/storcli)
+     + NRPE (optional): command definition
+   o On the Icinga-server:
+     + command definition
+     + service definition
+     + Call-Home-Service (optional): templates (http://www.thomas-krenn.com/de/wiki/Call-Home-Service_mit_Icinga_oder_Nagios_nutzen)
+
+ Parameter usage (example):
+ --------------------------
+   o ./check_lsi_raid -Tw 40 -Tc 50 -LD 0,1 -PD 1 -b 0
+   o LSIRAID OK (Ctrl #0)
