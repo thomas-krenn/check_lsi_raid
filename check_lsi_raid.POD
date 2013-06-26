@@ -69,7 +69,6 @@ The controller/ROC temperature can be set to a warning (parameter: B<-Tw>|B<--te
 Returns information about logical devices:
 
 	- General logical devices status
-
 	- Initialization in progress?
 
 =head2 getPhysDeviceStatus
@@ -99,7 +98,7 @@ Returns information about the battery backup unit (BBU) status.
 =head2 getThresholds
 
 Uses the B<-Tw>|B<--temperature-warn> and B<-Tc>|B<--temperature-critical> parameters and parses them.
-Uses correct Nagios Threshold implementation: L<http://nagiosplug.sourceforge.net/developer-guidelines.html#THRESHOLDFORMAT>
+Uses correct Nagios threshold implementation: L<http://nagiosplug.sourceforge.net/developer-guidelines.html#THRESHOLDFORMAT>
 Returns a temperature range (array) in or out which a temperature should be.
 Array content: ("in" or "out", range from, range to).
 
