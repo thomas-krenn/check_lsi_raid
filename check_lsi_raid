@@ -324,7 +324,7 @@ sub getControllerStatus {
 		}
 		return ($status, $statusMessage);
 	} else {
-		print "Invalid StorCLI command!";
+		print "Invalid StorCLI command!\n";
 		exit(STATE_UNKNOWN);
 	}
 }
@@ -408,7 +408,7 @@ sub getLogicalDeviceStatus {
 		}
 		return ($status, $statusMessage);
 	} else {
-		print "Invalid StorCLI command!";
+		print "Invalid StorCLI command!\n";
 		exit(STATE_UNKNOWN);
 	}
 }
@@ -609,7 +609,7 @@ sub getPhysDeviceStatus {
 		}
 		return ($status, $statusMessage);
 	} else {
-		print "Invalid StorCLI command!";
+		print "Invalid StorCLI command!\n";
 		exit(STATE_UNKNOWN);
 	}
 }
@@ -734,7 +734,7 @@ sub getBBUStatus {
 		}
 		return ($status, $statusMessage);
 	} else {
-		print "Invalid StorCLI command!";
+		print "Invalid StorCLI command!\n";
 		exit(STATE_UNKNOWN);
 	}
 }
@@ -761,14 +761,14 @@ sub getThresholds {
 		if($thresholds[0] =~ /^\@([0-9]*)\:([0-9]*)$/) {
 			@thresholds = ("in", $1, $2);
 		} else {
-			print "Invalid temperature parameter!";
+			print "Invalid temperature parameter!\n";
 			exit(STATE_UNKNOWN);
 		}
 	} elsif(substr($thresholds[0], 0, 1) eq "~") {
 		if($thresholds[0] =~ /^\~\:([0-9]*)$/) {
 			@thresholds = ("out", -273, $1);
 		} else {
-			print "Invalid temperature parameter!";
+			print "Invalid temperature parameter!\n";
 			exit(STATE_UNKNOWN);
 		}
 	} elsif(index($thresholds[0], ":") ne -1) {
@@ -777,7 +777,7 @@ sub getThresholds {
 		} elsif($thresholds[0] =~ /^([0-9]*)\:$/) {
 			@thresholds = ("in", -273, ($1 - 1));
 		} else {
-			print "Invalid temperature parameter!";
+			print "Invalid temperature parameter!\n";
 			exit(STATE_UNKNOWN);
 		}
 	} else {
@@ -786,7 +786,7 @@ sub getThresholds {
 	if(($thresholds[1] =~ /^(-?[0-9]*)$/) && ($thresholds[2] =~ /^(-?[0-9]*)$/)) {
 		return @thresholds;
 	} else {
-		print "Invalid temperature parameter!";
+		print "Invalid temperature parameter!\n";
 		exit(STATE_UNKNOWN);
 	}
 }
@@ -894,7 +894,7 @@ MAIN: {
 				}
 			}
 			if($found eq 0) {
-				print "No battery backup unit found for controller $controller!";
+				print "No battery backup unit found for controller $controller!\n";
 				exit(STATE_UNKNOWN);
 			}
 		}
