@@ -30,7 +30,6 @@ It checks the controller, the physical devices and the logical devices seperatel
 	use strict;
 	use warnings;
 	use Getopt::Long qw(:config no_ignore_case);
-	use Switch 'Perl6';
 
 =head1 METHODS
 
@@ -83,7 +82,8 @@ Returns information about physical devices attached to the LSI raid-controller:
 	- Predictive fail count
 	- S.M.A.R.T. status
 
-The device temperature can be set to a warning (parameter: B<-PDTw>|B<--physicaldevicetemperature-warn>) and a critical level (parameter: B<-PDTc>|B<--physicaldevicetemperature-critical>). See getThresholds for more information.
+The device temperature can be set to a warning (parameter: B<-PDTw>|B<--physicaldevicetemperature-warn>)
+and a critical level (parameter: B<-PDTc>|B<--physicaldevicetemperature-critical>). See getThresholds for more information.
 
 =head2 getBBUStatus
 
@@ -114,9 +114,9 @@ Array content: ("in" or "out", range from, range to).
 
 =head1 LICENSE AND COPYRIGHT
 
-Copyright (c) 2013, 
-Martin Grubhofer C<< <mgrubhofer@thomas-krenn.com> >>, C<< <s1110239013@students.fh-hagenberg.at> >>, 
-Scheipner Alexander C<< <s1110239032@students.fh-hagenberg.at> >>, 
+Copyright (c) 2013,
+Martin Grubhofer C<< <mgrubhofer@thomas-krenn.com> >>, C<< <s1110239013@students.fh-hagenberg.at> >>,
+Scheipner Alexander C<< <s1110239032@students.fh-hagenberg.at> >>,
 Werner Sebastian C<< <s1110239038@students.fh-hagenberg.at> >>.
 All rights reserved.
 

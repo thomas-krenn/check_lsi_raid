@@ -15,20 +15,18 @@
 # the terms of the GNU General Public License as published by the Free Software
 # Foundation; either version 3 of the License, or (at your option) any later
 # version.
-# 
+#
 # This program is distributed in the hope that it will be useful, but WITHOUT
 # ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
 # FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
 # details.
-# 
+#
 # You should have received a copy of the GNU General Public License along with
 # this program; if not, see <http://www.gnu.org/licenses/>.
 # ======================================================================================
 use strict;
 use warnings;
 use Getopt::Long qw(:config no_ignore_case);
-use feature qw/switch/; #später durch nachfolgende Zeile ersetzen, da wir noch mit Perl 5 arbeiten!
-#use Switch 'Perl6'; 
 
 our $VERBOSITY = 0;
 our $VERSION = "0.3";
@@ -38,7 +36,7 @@ our $C_TEMP_CRITICAL = 65;
 our $PD_TEMP_WARNING = 40;
 our $PD_TEMP_CRITICAL = 45;
 
-use constant { 
+use constant {
 	STATE_OK => 0,
 	STATE_WARNING => 1,
 	STATE_CRITICAL => 2,
@@ -86,18 +84,21 @@ sub displayUsage {
 sub displayHelp {
 	print $NAME . " Version: " . $VERSION ."\n";
 	print "Copyright (C) 2009-2013 Thomas-Krenn.AG\n";
-	print "Current updates available at http://www.thomas-krenn.com/en/oss/<NOT HERE YET!!!!!!>/\n";
+	print "Current updates available at http://git.thomas-krenn.com/check_lsi_raid.git\n";
 	print "This Nagios/Icinga Plugin checks LSI RAID-Controllers for Controller, \nPhysical-Device and Logical Device warnings and errors.\n";
 	print "In order for this plugin to work properly you need to add the \nnagios-user to your sudoers file (or create a new one in /etc/sudoers.d/)\n";
 	displayUsage();
-	print "Further information about this plugin can be found at
-http://www.thomas-krenn.com/en/oss/<NOT THERE YET!>
-Send email to the <NOT THERE YET!>-plugin-user mailing list if you have questions regarding
-use of this software, to submit patches, or suggest improvements.
-The mailing list is available at http://lists.thomas-krenn.com/\n";
+	print "Further information about this plugin can be found at:
+  http://www.thomas-krenn.com/de/wiki/LSI_RAID_Monitoring_Plugin and
+  http://www.thomas-krenn.com/de/wiki/LSI_RAID_Monitoring_Plugin
+Please send an email to the tk-monitoring plugin-user mailing list:
+  tk-monitoring-plugins-user\@lists.thomas-krenn.com
+if you have questions regarding use of this software, to submit patches, or
+suggest improvements. The mailing list archive is available at:
+  http://lists.thomas-krenn.com/pipermail/tk-monitoring-plugins-user\n";
 	exit(STATE_OK);
 }
- 
+
 # Prints the Name, Version of the Plugin
 # Also Prints the version of StorCLI
 sub displayVersion {
@@ -140,188 +141,182 @@ sub getControllerStatus {
 				$first = $1;
 				if($line =~ /([a-zA-Z0-9]*)$/) {
 					$last = $1;
-					given($first) {
-						when("Controller") {
-							if($line =~ /\s+([a-zA-Z0-9]*)/) {
-								given($1) {
-									when("Status") {
-										if($last ne "OK") {
-											$status = getExitState($status, STATE_WARNING);
-											$statusMessage .= "Ctrl. status not optimal, ";
-										}
-									}
-									when("must") {
-										if($last ne "No") {
-											$status = getExitState($status, STATE_CRITICAL);
-											$statusMessage .= "Ctrl. needs reboot, ";
-										}
-									}
-									when("has") {
-										if($last ne "No") {
-											$status = getExitState($status, STATE_WARNING);
-											$statusMessage .= "Ctrl. booted in safe mode, ";
-										}
-									}
-									when("temperature") {
-										$temp = $last;
-										if($temperature_w[0] eq "in") {
-											if(($temp >= $temperature_w[1]) && ($temp <= $temperature_w[2])) {
-												# is in warn range, so also check if in critical error range
-												if($temperature_c[0] eq "in") {
-													if(($temp >= $temperature_c[1]) && ($temp <= $temperature_c[2])) {
-														# critical error
-														$crit = 1;
-														$status = getExitState($status, STATE_CRITICAL);
-														if ($VERBOSITY == 0) {$statusMessage .= "Ctrl. temp. critical, "; }
-														if ($VERBOSITY == 1) {$statusMessage .= "Ctrl. temp. is critical (${temp}C), "; }
-														if ($VERBOSITY >= 2) {$statusMessage .= "Controller temperature is critical (${temp}C), "; }
-													}
-												} else {
-													if(($temp < $temperature_c[1]) || ($temp > $temperature_c[2])) {
-														# critical error
-														$crit = 1;
-														$status = getExitState($status, STATE_CRITICAL);
-														if ($VERBOSITY == 0) {$statusMessage .= "Ctrl. temp. critical, "; }
-														if ($VERBOSITY == 1) {$statusMessage .= "Ctrl. temp. is critical (${temp}C), "; }
-														if ($VERBOSITY >= 2) {$statusMessage .= "Controller temperature is critical (${temp}C), "; }
-													}
-												}
-												if($crit eq 0) { # only warn if not already given a critical error
-													$status = getExitState($status, STATE_WARNING);
-													if ($VERBOSITY == 0) {$statusMessage .= "Ctrl. temp. warning, "; }
-													if ($VERBOSITY == 1) {$statusMessage .= "Ctrl. temp. warning (${temp}C), "; }
-													if ($VERBOSITY >= 2) {$statusMessage .= "Controller temperature warning (${temp}C), "; }
-												}
+					if($first eq "Controller") {
+						if($line =~ /\s+([a-zA-Z0-9]*)/) {
+							if($1 eq "Status") {
+								if($last ne "OK") {
+									$status = getExitState($status, STATE_WARNING);
+									$statusMessage .= "Ctrl. status not optimal, ";
+								}
+							}
+							elsif($1 eq "must") {
+								if($last ne "No") {
+									$status = getExitState($status, STATE_CRITICAL);
+									$statusMessage .= "Ctrl. needs reboot, ";
+								}
+							}
+							elsif($1 eq "has") {
+								if($last ne "No") {
+									$status = getExitState($status, STATE_WARNING);
+									$statusMessage .= "Ctrl. booted in safe mode, ";
+								}
+							}
+							elsif($1 eq "temperature") {
+								$temp = $last;
+								if($temperature_w[0] eq "in") {
+									if(($temp >= $temperature_w[1]) && ($temp <= $temperature_w[2])) {
+										# is in warn range, so also check if in critical error range
+										if($temperature_c[0] eq "in") {
+											if(($temp >= $temperature_c[1]) && ($temp <= $temperature_c[2])) {
+												# critical error
+												$crit = 1;
+												$status = getExitState($status, STATE_CRITICAL);
+												if ($VERBOSITY == 0) {$statusMessage .= "Ctrl. temp. critical, "; }
+												if ($VERBOSITY == 1) {$statusMessage .= "Ctrl. temp. is critical (${temp}C), "; }
+												if ($VERBOSITY >= 2) {$statusMessage .= "Controller temperature is critical (${temp}C), "; }
 											}
 										} else {
-											if(($temp < $temperature_w[1]) || ($temp > $temperature_w[2])) {
-												# is in warn range, so also check if in critical error range
-												if($temperature_c[0] eq "in") {
-													if(($temp >= $temperature_c[1]) && ($temp <= $temperature_c[2])) {
-														# critical error
-														$crit = 1;
-														$status = getExitState($status, STATE_CRITICAL);
-														if ($VERBOSITY == 0) {$statusMessage .= "Ctrl. temp. critical, "; }
-														if ($VERBOSITY == 1) {$statusMessage .= "Ctrl. temp. is critical (${temp}C), "; }
-														if ($VERBOSITY >= 2) {$statusMessage .= "Controller temperature is critical (${temp}C), "; }
-													}
-												} else {
-													if(($temp < $temperature_c[1]) || ($temp > $temperature_c[2])) {
-														# critical error
-														$crit = 1;
-														$status = getExitState($status, STATE_CRITICAL);
-														if ($VERBOSITY == 0) {$statusMessage .= "Ctrl. temp. critical, "; }
-														if ($VERBOSITY == 1) {$statusMessage .= "Ctrl. temp. is critical (${temp}C), "; }
-														if ($VERBOSITY >= 2) {$statusMessage .= "Controller temperature is critical (${temp}C), "; }
-													}
-												}
-												if($crit eq 0) { # only warn if not already given a critical error
-													$status = getExitState($status, STATE_WARNING);
-													if ($VERBOSITY == 0) {$statusMessage .= "Ctrl. temp. warning, "; }
-													if ($VERBOSITY == 1) {$statusMessage .= "Ctrl. temp. warning (${temp}C), "; }
-													if ($VERBOSITY >= 2) {$statusMessage .= "Controller temperature warning (${temp}C), "; }
-												}
+											if(($temp < $temperature_c[1]) || ($temp > $temperature_c[2])) {
+												# critical error
+												$crit = 1;
+												$status = getExitState($status, STATE_CRITICAL);
+												if ($VERBOSITY == 0) {$statusMessage .= "Ctrl. temp. critical, "; }
+												if ($VERBOSITY == 1) {$statusMessage .= "Ctrl. temp. is critical (${temp}C), "; }
+												if ($VERBOSITY >= 2) {$statusMessage .= "Controller temperature is critical (${temp}C), "; }
 											}
 										}
-									}
-								}
-							}
-						}
-						when("ROC") {
-							if($line =~ /\s+([a-zA-Z0-9]*)/) {
-								if($1 eq "temperature") {
-									$temp = $last;
-									if($temperature_w[0] eq "in") {
-										if(($temp >= $temperature_w[1]) && ($temp <= $temperature_w[2])) {
-											# is in warn range, so also check if in critical error range
-											if($temperature_c[0] eq "in") {
-												if(($temp >= $temperature_c[1]) && ($temp <= $temperature_c[2])) {
-													# critical error
-													$crit = 1;
-													$status = getExitState($status, STATE_CRITICAL);
-													if ($VERBOSITY == 0) {$statusMessage .= "ROC temp. critical, "; }
-													if ($VERBOSITY == 1) {$statusMessage .= "ROC temp. is critical (${temp}C), "; }
-													if ($VERBOSITY >= 2) {$statusMessage .= "ROC temperature is critical (${temp}C), "; }
-												}
-											} else {
-												if(($temp < $temperature_c[1]) || ($temp > $temperature_c[2])) {
-													# critical error
-													$crit = 1;
-													$status = getExitState($status, STATE_CRITICAL);
-													if ($VERBOSITY == 0) {$statusMessage .= "ROC temp. critical, "; }
-													if ($VERBOSITY == 1) {$statusMessage .= "ROC temp. is critical (${temp}C), "; }
-													if ($VERBOSITY >= 2) {$statusMessage .= "ROC temperature is critical (${temp}C), "; }
-												}
-											}
-											if($crit eq 0) { # only warn if not already given a critical error
-												$status = getExitState($status, STATE_WARNING);
-												if ($VERBOSITY == 0) {$statusMessage .= "ROC temp. warning, "; }
-												if ($VERBOSITY == 1) {$statusMessage .= "ROC temp. warning (${temp}C), "; }
-												if ($VERBOSITY >= 2) {$statusMessage .= "ROC temperature warning (${temp}C), "; }
-											}
-										}
-									} else {
-										if(($temp < $temperature_w[1]) || ($temp > $temperature_w[2])) {
-											# is in warn range, so also check if in critical error range
-											if($temperature_c[0] eq "in") {
-												if(($temp >= $temperature_c[1]) && ($temp <= $temperature_c[2])) {
-													# critical error
-													$crit = 1;
-													$status = getExitState($status, STATE_CRITICAL);
-													if ($VERBOSITY == 0) {$statusMessage .= "ROC temp. critical, "; }
-													if ($VERBOSITY == 1) {$statusMessage .= "ROC temp. is critical (${temp}C), "; }
-													if ($VERBOSITY >= 2) {$statusMessage .= "ROC temperature is critical (${temp}C), "; }
-												}
-											} else {
-												if(($temp < $temperature_c[1]) || ($temp > $temperature_c[2])) {
-													# critical error
-													$crit = 1;
-													$status = getExitState($status, STATE_CRITICAL);
-													if ($VERBOSITY == 0) {$statusMessage .= "ROC temp. critical, "; }
-													if ($VERBOSITY == 1) {$statusMessage .= "ROC temp. is critical (${temp}C), "; }
-													if ($VERBOSITY >= 2) {$statusMessage .= "ROC temperature is critical (${temp}C), "; }
-												}
-											}
-											if($crit eq 0) { # only warn if not already given a critical error
-												$status = getExitState($status, STATE_WARNING);
-												if ($VERBOSITY == 0) {$statusMessage .= "ROC temp. warning, "; }
-												if ($VERBOSITY == 1) {$statusMessage .= "ROC temp. warning (${temp}C), "; }
-												if ($VERBOSITY >= 2) {$statusMessage .= "ROC temperature warning (${temp}C), "; }
-											}
-										}
-									}
-								}
-							}
-						}
-						when("Memory") {
-							if($line =~ /(\s+[a-zA-Z0-9]*)/) {
-								given($1) {
-									when("Correctable") {
-										if($last ne "0") {
+										if($crit eq 0) { # only warn if not already given a critical error
 											$status = getExitState($status, STATE_WARNING);
-											$statusMessage .= "Memory correctable errors detected, ";
+											if ($VERBOSITY == 0) {$statusMessage .= "Ctrl. temp. warning, "; }
+											if ($VERBOSITY == 1) {$statusMessage .= "Ctrl. temp. warning (${temp}C), "; }
+											if ($VERBOSITY >= 2) {$statusMessage .= "Controller temperature warning (${temp}C), "; }
 										}
 									}
-									when("Uncorrectable") {
-										if($last ne "0") {
-											$status = getExitState($status, STATE_CRITICAL);
-											$statusMessage .= "Memory uncorrectable errors detected, ";
+								} else {
+									if(($temp < $temperature_w[1]) || ($temp > $temperature_w[2])) {
+										# is in warn range, so also check if in critical error range
+										if($temperature_c[0] eq "in") {
+											if(($temp >= $temperature_c[1]) && ($temp <= $temperature_c[2])) {
+												# critical error
+												$crit = 1;
+												$status = getExitState($status, STATE_CRITICAL);
+												if ($VERBOSITY == 0) {$statusMessage .= "Ctrl. temp. critical, "; }
+												if ($VERBOSITY == 1) {$statusMessage .= "Ctrl. temp. is critical (${temp}C), "; }
+												if ($VERBOSITY >= 2) {$statusMessage .= "Controller temperature is critical (${temp}C), "; }
+											}
+										} else {
+											if(($temp < $temperature_c[1]) || ($temp > $temperature_c[2])) {
+												# critical error
+												$crit = 1;
+												$status = getExitState($status, STATE_CRITICAL);
+												if ($VERBOSITY == 0) {$statusMessage .= "Ctrl. temp. critical, "; }
+												if ($VERBOSITY == 1) {$statusMessage .= "Ctrl. temp. is critical (${temp}C), "; }
+												if ($VERBOSITY >= 2) {$statusMessage .= "Controller temperature is critical (${temp}C), "; }
+											}
+										}
+										if($crit eq 0) { # only warn if not already given a critical error
+											$status = getExitState($status, STATE_WARNING);
+											if ($VERBOSITY == 0) {$statusMessage .= "Ctrl. temp. warning, "; }
+											if ($VERBOSITY == 1) {$statusMessage .= "Ctrl. temp. warning (${temp}C), "; }
+											if ($VERBOSITY >= 2) {$statusMessage .= "Controller temperature warning (${temp}C), "; }
 										}
 									}
 								}
 							}
 						}
-						when("Failed") {
-							if($last ne "No") {
-								$status = getExitState($status, STATE_WARNING);
-								$statusMessage .= "Failed to get lock key on bootup, ";
+					}
+					elsif($first eq "ROC") {
+						if($line =~ /\s+([a-zA-Z0-9]*)/) {
+							if($1 eq "temperature") {
+								$temp = $last;
+								if($temperature_w[0] eq "in") {
+									if(($temp >= $temperature_w[1]) && ($temp <= $temperature_w[2])) {
+										# is in warn range, so also check if in critical error range
+										if($temperature_c[0] eq "in") {
+											if(($temp >= $temperature_c[1]) && ($temp <= $temperature_c[2])) {
+												# critical error
+												$crit = 1;
+												$status = getExitState($status, STATE_CRITICAL);
+												if ($VERBOSITY == 0) {$statusMessage .= "ROC temp. critical, "; }
+												if ($VERBOSITY == 1) {$statusMessage .= "ROC temp. is critical (${temp}C), "; }
+												if ($VERBOSITY >= 2) {$statusMessage .= "ROC temperature is critical (${temp}C), "; }
+											}
+										} else {
+											if(($temp < $temperature_c[1]) || ($temp > $temperature_c[2])) {
+												# critical error
+												$crit = 1;
+												$status = getExitState($status, STATE_CRITICAL);
+												if ($VERBOSITY == 0) {$statusMessage .= "ROC temp. critical, "; }
+												if ($VERBOSITY == 1) {$statusMessage .= "ROC temp. is critical (${temp}C), "; }
+												if ($VERBOSITY >= 2) {$statusMessage .= "ROC temperature is critical (${temp}C), "; }
+											}
+										}
+										if($crit eq 0) { # only warn if not already given a critical error
+											$status = getExitState($status, STATE_WARNING);
+											if ($VERBOSITY == 0) {$statusMessage .= "ROC temp. warning, "; }
+											if ($VERBOSITY == 1) {$statusMessage .= "ROC temp. warning (${temp}C), "; }
+											if ($VERBOSITY >= 2) {$statusMessage .= "ROC temperature warning (${temp}C), "; }
+										}
+									}
+								} else {
+									if(($temp < $temperature_w[1]) || ($temp > $temperature_w[2])) {
+										# is in warn range, so also check if in critical error range
+										if($temperature_c[0] eq "in") {
+											if(($temp >= $temperature_c[1]) && ($temp <= $temperature_c[2])) {
+												# critical error
+												$crit = 1;
+												$status = getExitState($status, STATE_CRITICAL);
+												if ($VERBOSITY == 0) {$statusMessage .= "ROC temp. critical, "; }
+												if ($VERBOSITY == 1) {$statusMessage .= "ROC temp. is critical (${temp}C), "; }
+												if ($VERBOSITY >= 2) {$statusMessage .= "ROC temperature is critical (${temp}C), "; }
+											}
+										} else {
+											if(($temp < $temperature_c[1]) || ($temp > $temperature_c[2])) {
+												# critical error
+												$crit = 1;
+												$status = getExitState($status, STATE_CRITICAL);
+												if ($VERBOSITY == 0) {$statusMessage .= "ROC temp. critical, "; }
+												if ($VERBOSITY == 1) {$statusMessage .= "ROC temp. is critical (${temp}C), "; }
+												if ($VERBOSITY >= 2) {$statusMessage .= "ROC temperature is critical (${temp}C), "; }
+											}
+										}
+										if($crit eq 0) { # only warn if not already given a critical error
+											$status = getExitState($status, STATE_WARNING);
+											if ($VERBOSITY == 0) {$statusMessage .= "ROC temp. warning, "; }
+											if ($VERBOSITY == 1) {$statusMessage .= "ROC temp. warning (${temp}C), "; }
+											if ($VERBOSITY >= 2) {$statusMessage .= "ROC temperature warning (${temp}C), "; }
+										}
+									}
+								}
 							}
 						}
-						when("A") {
-							if($last ne "No") {
-								$status = getExitState($status, STATE_WARNING);
-								$statusMessage .= "A rollback operation is in progress, ";
+					}
+					elsif($first eq "Memory") {
+						if($line =~ /(\s+[a-zA-Z0-9]*)/) {
+							if($1 eq "Correctable") {
+								if($last ne "0") {
+									$status = getExitState($status, STATE_WARNING);
+									$statusMessage .= "Memory correctable errors detected, ";
+								}
 							}
+							elsif($1 eq "Uncorrectable") {
+								if($last ne "0") {
+									$status = getExitState($status, STATE_CRITICAL);
+									$statusMessage .= "Memory uncorrectable errors detected, ";
+								}
+							}
+						}
+					}
+					elsif($first eq "Failed") {
+						if($last ne "No") {
+							$status = getExitState($status, STATE_WARNING);
+							$statusMessage .= "Failed to get lock key on bootup, ";
+						}
+					}
+					elsif($first eq "A") {
+						if($last ne "No") {
+							$status = getExitState($status, STATE_WARNING);
+							$statusMessage .= "A rollback operation is in progress, ";
 						}
 					}
 				}
@@ -331,7 +326,7 @@ sub getControllerStatus {
 	} else {
 		print "Invalid StorCLI command!";
 		exit(STATE_UNKNOWN);
-	}	
+	}
 }
 
 # Returns information about:
@@ -347,11 +342,10 @@ sub getLogicalDeviceStatus {
 	my $status = 0; # Return Status
 	my $statusMessage = ''; # Return String
 
-	given(scalar(@logDevices)) {
-		when(0) { $command .= "/vall"; }
-		when(1) { $command .= "/v$logDevices[0]"; }
-		default { $command .= "/v".join(",", @logDevices); }
-	}
+	if(scalar(@logDevices) == 0) { $command .= "/vall"; }
+	elsif(scalar(@logDevices) == 1) { $command .= "/v$logDevices[0]"; }
+	else { $command .= "/v".join(",", @logDevices); }
+
 	$command .= " show $action";
 	my @output = `$command`;
 
@@ -435,19 +429,17 @@ sub getPhysDeviceStatus {
 	my $status = 0;
 	my $statusMessage = '';
 
-	given(scalar(@enclosures)) {
-		when(0) { $command .= "/eall"; }
-		when(1) { $command .= "/e$enclosures[0]"; }
-		default { $command .= "/e".join(",", @enclosures); }
-	}
-	given(scalar(@physDevices)) {
-		when(0) { $command .= "/sall"; }
-		when(1) { $command .= "/s$physDevices[0]"; }
-		default { $command .= "/s".join(",", @physDevices); }
-	}
+	if(scalar(@enclosures) == 0) { $command .= "/eall"; }
+	elsif(scalar(@enclosures) == 1) { $command .= "/e$enclosures[0]"; }
+	else { $command .= "/e".join(",", @enclosures); }
+
+	if(scalar(@physDevices) == 0) { $command .= "/sall"; }
+	elsif(scalar(@physDevices) == 1) { $command .= "/s$physDevices[0]"; }
+	else { $command .= "/s".join(",", @physDevices); }
+
 	$command .= " show $action";
 	my @output = `$command`;
-	
+
 	if($output[1] eq "Status = Success\n") {
 		if($action eq "all") {
 			my $output_enc = -1;
@@ -484,111 +476,109 @@ sub getPhysDeviceStatus {
 						}
 					} elsif($values[0] =~ /^[a-zA-Z\.]*/) {
 						# Check the drive state in block Detailed information
-						given($values[0]) {
-							when("Shield") {
-								if($values[3] ne "0") {
-									$status = getExitState($status, STATE_WARNING);
-									if ($VERBOSITY == 0) {$statusMessage .= "Shield counter (phys. drive) not 0, "; }
-									if ($VERBOSITY == 1) {$statusMessage .= "Physical drive $output_dev: shield counter not 0, "; }
-									if ($VERBOSITY >= 2) {$statusMessage .= "Physical drive $output_dev in enclosure $output_enc: shield counter not 0, "; }
-								}
+						if($values[0] eq "Shield") {
+							if($values[3] ne "0") {
+								$status = getExitState($status, STATE_WARNING);
+								if ($VERBOSITY == 0) {$statusMessage .= "Shield counter (phys. drive) not 0, "; }
+								if ($VERBOSITY == 1) {$statusMessage .= "Physical drive $output_dev: shield counter not 0, "; }
+								if ($VERBOSITY >= 2) {$statusMessage .= "Physical drive $output_dev in enclosure $output_enc: shield counter not 0, "; }
 							}
-							when("Media") {
-								if($values[4] ne "0") {
-									$status = getExitState($status, STATE_WARNING);
-									if ($VERBOSITY == 0) {$statusMessage .= "Media error count (phys. drive) not 0, "; }
-									if ($VERBOSITY == 1) {$statusMessage .= "Physical drive $output_dev: media error count not 0, "; }
-									if ($VERBOSITY >= 2) {$statusMessage .= "Physical drive $output_dev in enclosure $output_enc: media error count not 0, "; }
-								}
+						}
+						elsif($values[0] eq "Media") {
+							if($values[4] ne "0") {
+								$status = getExitState($status, STATE_WARNING);
+								if ($VERBOSITY == 0) {$statusMessage .= "Media error count (phys. drive) not 0, "; }
+								if ($VERBOSITY == 1) {$statusMessage .= "Physical drive $output_dev: media error count not 0, "; }
+								if ($VERBOSITY >= 2) {$statusMessage .= "Physical drive $output_dev in enclosure $output_enc: media error count not 0, "; }
 							}
-							when("Other") {
-								if($values[4] ne "0") {
-									$status = getExitState($status, STATE_WARNING);
-									if ($VERBOSITY == 0) {$statusMessage .= "Other error count (phys. drive) not 0, "; }
-									if ($VERBOSITY == 1) {$statusMessage .= "Physical drive $output_dev: media error count not 0, "; }
-									if ($VERBOSITY >= 2) {$statusMessage .= "Physical drive $output_dev in enclosure $output_enc: media error count not 0, "; }
-								}
+						}
+						elsif($values[0] eq "Other") {
+							if($values[4] ne "0") {
+								$status = getExitState($status, STATE_WARNING);
+								if ($VERBOSITY == 0) {$statusMessage .= "Other error count (phys. drive) not 0, "; }
+								if ($VERBOSITY == 1) {$statusMessage .= "Physical drive $output_dev: media error count not 0, "; }
+								if ($VERBOSITY >= 2) {$statusMessage .= "Physical drive $output_dev in enclosure $output_enc: media error count not 0, "; }
 							}
-							when("Drive") {
-								chop($values[3]);
-								my $temp = $values[3];
-								my $crit = 0;
-								# check for warn range
-								if($physicalDeviceTemperature_w[0] eq "in") {
-									if(($temp >= $physicalDeviceTemperature_w[1]) && ($temp <= $physicalDeviceTemperature_w[2])) {
-										# is in warn range, so also check if in critical error range
-										if($physicalDeviceTemperature_c[0] eq "in") {
-											if(($temp >= $physicalDeviceTemperature_c[1]) && ($temp <= $physicalDeviceTemperature_c[2])) {
-												# critical error
-												$crit = 1;
-												$status = getExitState($status, STATE_CRITICAL);
-												if ($VERBOSITY == 0) {$statusMessage .= "Phys. drive temperature critical, "; }
-												if ($VERBOSITY == 1) {$statusMessage .= "Physical drive $output_dev: temperature is ${temp}C, "; }
-												if ($VERBOSITY >= 2) {$statusMessage .= "Physical drive $output_dev in enclosure $output_enc: temperature is ${temp}C, "; }
-											}
-										} else {
-											if(($temp < $physicalDeviceTemperature_c[1]) || ($temp > $physicalDeviceTemperature_c[2])) {
-												# critical error
-												$crit = 1;
-												$status = getExitState($status, STATE_CRITICAL);
-												if ($VERBOSITY == 0) {$statusMessage .= "Phys. drive temperature critical, "; }
-												if ($VERBOSITY == 1) {$statusMessage .= "Physical drive $output_dev: temperature is ${temp}C, "; }
-												if ($VERBOSITY >= 2) {$statusMessage .= "Physical drive $output_dev in enclosure $output_enc: temperature is ${temp}C, "; }
-											}
+						}
+						elsif($values[0] eq "Drive") {
+							chop($values[3]);
+							my $temp = $values[3];
+							my $crit = 0;
+							# check for warn range
+							if($physicalDeviceTemperature_w[0] eq "in") {
+								if(($temp >= $physicalDeviceTemperature_w[1]) && ($temp <= $physicalDeviceTemperature_w[2])) {
+									# is in warn range, so also check if in critical error range
+									if($physicalDeviceTemperature_c[0] eq "in") {
+										if(($temp >= $physicalDeviceTemperature_c[1]) && ($temp <= $physicalDeviceTemperature_c[2])) {
+											# critical error
+											$crit = 1;
+											$status = getExitState($status, STATE_CRITICAL);
+											if ($VERBOSITY == 0) {$statusMessage .= "Phys. drive temperature critical, "; }
+											if ($VERBOSITY == 1) {$statusMessage .= "Physical drive $output_dev: temperature is ${temp}C, "; }
+											if ($VERBOSITY >= 2) {$statusMessage .= "Physical drive $output_dev in enclosure $output_enc: temperature is ${temp}C, "; }
 										}
-										if($crit eq 0) { # only warn if not already given a critical error
-											$status = getExitState($status, STATE_WARNING);
-											if ($VERBOSITY == 0) {$statusMessage .= "Phys. drive temperature warning, "; }
+									} else {
+										if(($temp < $physicalDeviceTemperature_c[1]) || ($temp > $physicalDeviceTemperature_c[2])) {
+											# critical error
+											$crit = 1;
+											$status = getExitState($status, STATE_CRITICAL);
+											if ($VERBOSITY == 0) {$statusMessage .= "Phys. drive temperature critical, "; }
 											if ($VERBOSITY == 1) {$statusMessage .= "Physical drive $output_dev: temperature is ${temp}C, "; }
 											if ($VERBOSITY >= 2) {$statusMessage .= "Physical drive $output_dev in enclosure $output_enc: temperature is ${temp}C, "; }
 										}
 									}
-								} else {
-									if(($temp < $physicalDeviceTemperature_w[1]) || ($temp > $physicalDeviceTemperature_w[2])) {
-										# is in warn range, so also check if in critical error range
-										if($physicalDeviceTemperature_c[0] eq "in") {
-											if(($temp >= $physicalDeviceTemperature_c[1]) && ($temp <= $physicalDeviceTemperature_c[2])) {
-												# critical error
-												$crit = 1;
-												$status = getExitState($status, STATE_CRITICAL);
-												if ($VERBOSITY == 0) {$statusMessage .= "Phys. drive temperature critical, "; }
-												if ($VERBOSITY == 1) {$statusMessage .= "Physical drive $output_dev: temperature is ${temp}C, "; }
-												if ($VERBOSITY >= 2) {$statusMessage .= "Physical drive $output_dev in enclosure $output_enc: temperature is ${temp}C, "; }
-											}
-										} else {
-											if(($temp < $physicalDeviceTemperature_c[1]) || ($temp > $physicalDeviceTemperature_c[2])) {
-												# critical error
-												$crit = 1;
-												$status = getExitState($status, STATE_CRITICAL);
-												if ($VERBOSITY == 0) {$statusMessage .= "Phys. drive temperature critical, "; }
-												if ($VERBOSITY == 1) {$statusMessage .= "Physical drive $output_dev: temperature is ${temp}C, "; }
-												if ($VERBOSITY >= 2) {$statusMessage .= "Physical drive $output_dev in enclosure $output_enc: temperature is ${temp}C, "; }
-											}
+									if($crit eq 0) { # only warn if not already given a critical error
+										$status = getExitState($status, STATE_WARNING);
+										if ($VERBOSITY == 0) {$statusMessage .= "Phys. drive temperature warning, "; }
+										if ($VERBOSITY == 1) {$statusMessage .= "Physical drive $output_dev: temperature is ${temp}C, "; }
+										if ($VERBOSITY >= 2) {$statusMessage .= "Physical drive $output_dev in enclosure $output_enc: temperature is ${temp}C, "; }
+									}
+								}
+							} else {
+								if(($temp < $physicalDeviceTemperature_w[1]) || ($temp > $physicalDeviceTemperature_w[2])) {
+									# is in warn range, so also check if in critical error range
+									if($physicalDeviceTemperature_c[0] eq "in") {
+										if(($temp >= $physicalDeviceTemperature_c[1]) && ($temp <= $physicalDeviceTemperature_c[2])) {
+											# critical error
+											$crit = 1;
+											$status = getExitState($status, STATE_CRITICAL);
+											if ($VERBOSITY == 0) {$statusMessage .= "Phys. drive temperature critical, "; }
+											if ($VERBOSITY == 1) {$statusMessage .= "Physical drive $output_dev: temperature is ${temp}C, "; }
+											if ($VERBOSITY >= 2) {$statusMessage .= "Physical drive $output_dev in enclosure $output_enc: temperature is ${temp}C, "; }
 										}
-										if($crit eq 0) { # only warn if not already given a critical error
-											$status = getExitState($status, STATE_WARNING);
-											if ($VERBOSITY == 0) {$statusMessage .= "Phys. drive temperature warning, "; }
+									} else {
+										if(($temp < $physicalDeviceTemperature_c[1]) || ($temp > $physicalDeviceTemperature_c[2])) {
+											# critical error
+											$crit = 1;
+											$status = getExitState($status, STATE_CRITICAL);
+											if ($VERBOSITY == 0) {$statusMessage .= "Phys. drive temperature critical, "; }
 											if ($VERBOSITY == 1) {$statusMessage .= "Physical drive $output_dev: temperature is ${temp}C, "; }
 											if ($VERBOSITY >= 2) {$statusMessage .= "Physical drive $output_dev in enclosure $output_enc: temperature is ${temp}C, "; }
 										}
 									}
+									if($crit eq 0) { # only warn if not already given a critical error
+										$status = getExitState($status, STATE_WARNING);
+										if ($VERBOSITY == 0) {$statusMessage .= "Phys. drive temperature warning, "; }
+										if ($VERBOSITY == 1) {$statusMessage .= "Physical drive $output_dev: temperature is ${temp}C, "; }
+										if ($VERBOSITY >= 2) {$statusMessage .= "Physical drive $output_dev in enclosure $output_enc: temperature is ${temp}C, "; }
+									}
 								}
 							}
-							when("Predictive") {
-								if($values[4] ne "0") {
-									$status = getExitState($status, STATE_WARNING);
-									if ($VERBOSITY == 0) {$statusMessage .= "Phys. drive Predictive Fail Count not 0, "; }
-									if ($VERBOSITY == 1) {$statusMessage .= "Physical drive $output_dev: Predictive Fail Count not 0, "; }
-									if ($VERBOSITY >= 2) {$statusMessage .= "Physical drive $output_dev in enclosure $output_enc: Predictive Fail Count not 0, "; }
-								}
+						}
+						elsif($values[0] eq "Predictive") {
+							if($values[4] ne "0") {
+								$status = getExitState($status, STATE_WARNING);
+								if ($VERBOSITY == 0) {$statusMessage .= "Phys. drive Predictive Fail Count not 0, "; }
+								if ($VERBOSITY == 1) {$statusMessage .= "Physical drive $output_dev: Predictive Fail Count not 0, "; }
+								if ($VERBOSITY >= 2) {$statusMessage .= "Physical drive $output_dev in enclosure $output_enc: Predictive Fail Count not 0, "; }
 							}
-							when("S.M.A.R.T") {
-								if($values[6] ne "No") {
-									$status = getExitState($status, STATE_WARNING);
-									if ($VERBOSITY == 0) {$statusMessage .= "S.M.A.R.T alert flagged by drive, "; }
-									if ($VERBOSITY == 1) {$statusMessage .= "Physical drive $output_dev: S.M.A.R.T alert flagged, "; }
-									if ($VERBOSITY >= 2) {$statusMessage .= "Physical drive $output_dev in enclosure $output_enc: S.M.A.R.T alert flagged, "; }
-								}
+						}
+						elsif($values[0] eq "S.M.A.R.T") {
+							if($values[6] ne "No") {
+								$status = getExitState($status, STATE_WARNING);
+								if ($VERBOSITY == 0) {$statusMessage .= "S.M.A.R.T alert flagged by drive, "; }
+								if ($VERBOSITY == 1) {$statusMessage .= "Physical drive $output_dev: S.M.A.R.T alert flagged, "; }
+								if ($VERBOSITY >= 2) {$statusMessage .= "Physical drive $output_dev in enclosure $output_enc: S.M.A.R.T alert flagged, "; }
 							}
 						}
 					} else {
@@ -652,16 +642,12 @@ sub getBBUStatus {
 					$last = $1;
 					# Check BBU_Info block
 					if ($blockid eq 1) {
-						given($first) {
-							when("Battery") {
-								if($line =~ /\s+([a-zA-Z0-9]*)/) {
-									given($1) {
-										when("State") {
-											if($last ne "Optimal") {
-												$status = getExitState($status, STATE_WARNING);
-												$statusMessage .= "BBU state not optimal, ";
-											}
-										}
+						if($first eq "Battery") {
+							if($line =~ /\s+([a-zA-Z0-9]*)/) {
+								if($1 eq "State") {
+									if($last ne "Optimal") {
+										$status = getExitState($status, STATE_WARNING);
+										$statusMessage .= "BBU state not optimal, ";
 									}
 								}
 							}
@@ -669,81 +655,75 @@ sub getBBUStatus {
 					}
 					# Check BBU_Firmware_Status
 					if ($blockid eq 2) {
-						given($first) {
-							when("Temperature") {
-								if($last ne "OK") {
-									$status = getExitState($status, STATE_CRITICAL);
-									if ($VERBOSITY == 0) {$statusMessage .= "BBU temp. critical, "; }
-									if ($VERBOSITY >= 1) {$statusMessage .= "BBU Temperature critical, "; }
-								}
+						if($first eq "Temperature") {
+							if($last ne "OK") {
+								$status = getExitState($status, STATE_CRITICAL);
+								if ($VERBOSITY == 0) {$statusMessage .= "BBU temp. critical, "; }
+								if ($VERBOSITY >= 1) {$statusMessage .= "BBU Temperature critical, "; }
 							}
-							when("Battery") {
-								if($line =~ /\s+([a-zA-Z0-9]*)/) {
-									given($1) {
-										when("State") {
-											if($last ne "Optimal") {
-												$status = getExitState($status, STATE_WARNING);
-												$statusMessage .= "BBU state not optimal, ";
-											}
-										}
-										when("Pack") {
-											if($last ne "No") {
-												$status = getExitState($status, STATE_CRITICAL);
-												$statusMessage .= "BBU pack missing, ";
-											}
-										}
-										when("Replacement") {
-											if($last ne "No") {
-												$status = getExitState($status, STATE_WARNING);
-												$statusMessage .= "BBU replacement required, ";
-											}
-										}
+						}
+						elsif($first eq "Battery") {
+							if($line =~ /\s+([a-zA-Z0-9]*)/) {
+								if($1 eq "State") {
+									if($last ne "Optimal") {
+										$status = getExitState($status, STATE_WARNING);
+										$statusMessage .= "BBU state not optimal, ";
+									}
+								}
+								elsif($1 eq "Pack") {
+									if($last ne "No") {
+										$status = getExitState($status, STATE_CRITICAL);
+										$statusMessage .= "BBU pack missing, ";
+									}
+								}
+								elsif($1 eq "Replacement") {
+									if($last ne "No") {
+										$status = getExitState($status, STATE_WARNING);
+										$statusMessage .= "BBU replacement required, ";
 									}
 								}
 							}
-							when("Voltage") {
-								if($last ne "OK") {
-									$status = getExitState($status, STATE_CRITICAL);
-									$statusMessage .= "BBU voltage not ok, ";
-								}
+						}
+						elsif($first eq "Voltage") {
+							if($last ne "OK") {
+								$status = getExitState($status, STATE_CRITICAL);
+								$statusMessage .= "BBU voltage not ok, ";
 							}
-							when("Learn") {
-								if($last ne "OK") {
-									$status = getExitState($status, STATE_WARNING);
-									$statusMessage .= "BBU learn cycle status not ok, ";
-								}
+						}
+						elsif($first eq "Learn") {
+							if($last ne "OK") {
+								$status = getExitState($status, STATE_WARNING);
+								$statusMessage .= "BBU learn cycle status not ok, ";
 							}
-							when("I2C") {
-								if($last ne "No") {
-									$status = getExitState($status, STATE_CRITICAL);
-									$statusMessage .= "BBU I2C errors, ";
-								}
+						}
+						elsif($first eq "I2C") {
+							if($last ne "No") {
+								$status = getExitState($status, STATE_CRITICAL);
+								$statusMessage .= "BBU I2C errors, ";
 							}
-							when("Remaining") {
-								if($last ne "No") {
-									$status = getExitState($status, STATE_WARNING);
-									if ($VERBOSITY == 0) {$statusMessage .= "BBU capacity low, "; }
-									if ($VERBOSITY >= 1) {$statusMessage .= "BBU remaining capacity is low, "; }
-								}
+						}
+						elsif($first eq "Remaining") {
+							if($last ne "No") {
+								$status = getExitState($status, STATE_WARNING);
+								if ($VERBOSITY == 0) {$statusMessage .= "BBU capacity low, "; }
+								if ($VERBOSITY >= 1) {$statusMessage .= "BBU remaining capacity is low, "; }
 							}
 						}
 					}
 					# Check GasGaugeStatus
 					if ($blockid eq 3) {
-						given($first) {
-							when("Over") {
-								if($line =~ /\s+([a-zA-Z0-9]*)/) {
-									if($1 eq "Temperature") {
-										if($last ne "No") {
-											$status = getExitState($status, STATE_CRITICAL);
-											if ($VERBOSITY == 0) {$statusMessage .= "BBU temp. critical, "; }
-											if ($VERBOSITY >= 1) {$statusMessage .= "BBU Temperature critical, "; }
-										}
-									} elsif($1 eq "Charged") {
-										if($last ne "No") {
-											$status = getExitState($status, STATE_CRITICAL);
-											$statusMessage .= "BBU over charged, ";
-										}
+						if($first eq "Over") {
+							if($line =~ /\s+([a-zA-Z0-9]*)/) {
+								if($1 eq "Temperature") {
+									if($last ne "No") {
+										$status = getExitState($status, STATE_CRITICAL);
+										if ($VERBOSITY == 0) {$statusMessage .= "BBU temp. critical, "; }
+										if ($VERBOSITY >= 1) {$statusMessage .= "BBU Temperature critical, "; }
+									}
+								} elsif($1 eq "Charged") {
+									if($last ne "No") {
+										$status = getExitState($status, STATE_CRITICAL);
+										$statusMessage .= "BBU over charged, ";
 									}
 								}
 							}
@@ -825,7 +805,7 @@ MAIN: {
 	my $bbu = 1;
 	my $platform = $^O;
 	my $statusMessage = '';
-	
+
 	# Check platform
 	if ($platform eq 'linux') {
 		chomp($sudo = `which sudo`);
@@ -869,7 +849,7 @@ MAIN: {
 		'C|controller=i' => \$controller,
 		'EID|enclosure=s' => \@enclosures,
 		'LD|logicaldevice=s' => \@logDevices,
-		'PD|physicaldevice=s' => \@physDevices, 
+		'PD|physicaldevice=s' => \@physDevices,
 		'Tw|temperature-warn=s' => \@temperature_w,
 		'Tc|temperature-critical=s' => \@temperature_c,
 		'PDTw|physicaldevicetemperature-warn=s' => \@physicalDeviceTemperature_w,
@@ -954,10 +934,8 @@ MAIN: {
 		$newstatusMessage .= $statusMessage;
 		$exitstatus = getExitState($newexitstatus, $exitstatus);
 	}
-	given($exitstatus) {
-		when(0) { print "LSIRAID OK (Ctrl #$controller)\n"; }
-		when(1) { chop($newstatusMessage); chop($newstatusMessage); print "LSIRAID WARNING (Ctrl #$controller): [$newstatusMessage]\n"; }
-		when(2) { chop($newstatusMessage); chop($newstatusMessage); print "LSIRAID CRITICAL (Ctrl #$controller): [$newstatusMessage]\n"; }
-	}
+	if($exitstatus == 0) { print "LSIRAID OK (Ctrl #$controller)\n"; }
+	elsif($exitstatus == 1) { chop($newstatusMessage); chop($newstatusMessage); print "LSIRAID WARNING (Ctrl #$controller): [$newstatusMessage]\n"; }
+	elsif($exitstatus == 2) { chop($newstatusMessage); chop($newstatusMessage); print "LSIRAID CRITICAL (Ctrl #$controller): [$newstatusMessage]\n"; }
 	exit($exitstatus);
 }
