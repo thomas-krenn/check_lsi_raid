@@ -80,7 +80,6 @@ sub displayUsage {
 }
 
 # Displays a short Help text for the user
-# TODO: ADD URL and Mailing List
 sub displayHelp {
 	print $NAME . " Version: " . $VERSION ."\n";
 	print "Copyright (C) 2013 Thomas-Krenn.AG\n";
@@ -313,6 +312,7 @@ sub getControllerStatus {
 							$statusMessage .= "Failed to get lock key on bootup, ";
 						}
 					}
+					#TODO Improve rollback detection
 					elsif($first eq "A") {
 						if($last ne "No") {
 							$status = getExitState($status, STATE_WARNING);
@@ -353,6 +353,7 @@ sub getLogicalDeviceStatus {
 		if($action eq "all") {
 			my $output_dev = -1;
 			my $flag = -1;
+			#check for lines with /c0/vX and then go 6 lines forward
 			foreach my $line (@output) {
 				if($flag > 0) {
 					$flag--;
@@ -370,8 +371,8 @@ sub getLogicalDeviceStatus {
 							if ($VERBOSITY >= 1) {$statusMessage .= "Virtual disk $output_dev state not optimal ($values[2]), "; }
 						} else {
 							$status = getExitState($status, STATE_CRITICAL);
-							if ($VERBOSITY == 0) {$statusMessage .= "Virtual disk not consistant, "; }
-							if ($VERBOSITY >= 1) {$statusMessage .= "Virtual disk $output_dev is not consistant (state $values[2]), "; }
+							if ($VERBOSITY == 0) {$statusMessage .= "Virtual disk state not optimal - not consistant, "; }
+							if ($VERBOSITY >= 1) {$statusMessage .= "Virtual disk $output_dev is not optimal - not consistant (state $values[2]), "; }
 						}
 					}
 					else {
