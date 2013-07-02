@@ -83,7 +83,7 @@ sub displayUsage {
 # TODO: ADD URL and Mailing List
 sub displayHelp {
 	print $NAME . " Version: " . $VERSION ."\n";
-	print "Copyright (C) 2009-2013 Thomas-Krenn.AG\n";
+	print "Copyright (C) 2013 Thomas-Krenn.AG\n";
 	print "Current updates available at http://git.thomas-krenn.com/check_lsi_raid.git\n";
 	print "This Nagios/Icinga Plugin checks LSI RAID-Controllers for Controller, \nPhysical-Device and Logical Device warnings and errors.\n";
 	print "In order for this plugin to work properly you need to add the \nnagios-user to your sudoers file (or create a new one in /etc/sudoers.d/)\n";
@@ -596,12 +596,15 @@ sub getPhysDeviceStatus {
 					$output_dev = $2;
 				}
 				if(($output_enc ne -1) && ($output_dev ne -1)) {
-					if($line =~ /^\/c$controller$output_enc$output_dev\s*([\-]{1}|[0-9\%]*)\s*([\w\s]*)$/) { # gets status and percentage
-						if($2 ne "Not in progress") {
+					#grep for status and floating point number
+					if($line =~ /^\/c$controller\/e$output_enc\/s$output_dev\s*([\-]{1}|[0-9]*\.?[0-9]*)\s*([\w\s]*)$/){
+						my $inProgress = $1;
+						my $state = $2;
+						if($state =~ m/^In progress/) {
 							$status = getExitState($status, STATE_WARNING);
 							if ($VERBOSITY == 0) {$statusMessage .= "Phys. drive: $action in progress, "; }
 							if ($VERBOSITY == 1) {$statusMessage .= "Physical drive $output_dev: $action in progress, "; }
-							if ($VERBOSITY >= 2) {$statusMessage .= "Physical drive $output_dev in enclosure $output_enc: $action in progress (percentage: $1), "; }
+							if ($VERBOSITY >= 2) {$statusMessage .= "Physical drive $output_dev in enclosure $output_enc: $action in progress (percentage: $inProgress), "; }
 						}
 					}
 				}
