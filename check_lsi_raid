@@ -813,6 +813,27 @@ MAIN: {
 	my $platform = $^O;
 	my $statusMessage = '';
 
+	if ( !(GetOptions(
+		'h|help' => sub {displayHelp();},
+		'v|verbose' => sub {$VERBOSITY = 1 },
+		'vv' => sub {$VERBOSITY = 2},
+		'vvv' => sub {$VERBOSITY = 3},
+		'V|version' => sub {displayVersion($sudo, $storcli);},
+		'C|controller=i' => \$controller,
+		'EID|enclosure=s' => \@enclosures,
+		'LD|logicaldevice=s' => \@logDevices,
+		'PD|physicaldevice=s' => \@physDevices,
+		'Tw|temperature-warn=s' => \@temperature_w,
+		'Tc|temperature-critical=s' => \@temperature_c,
+		'PDTw|physicaldevicetemperature-warn=s' => \@physicalDeviceTemperature_w,
+		'PDTc|physicaldevicetemperature-critical=s' => \@physicalDeviceTemperature_c,
+		'p|path=s' => \$storcli,
+		'b|BBU=i' => \$bbu
+	)))	{
+		print $NAME . " Version: " . $VERSION ."\n";
+		displayUsage();
+		exit(STATE_UNKNOWN);
+	}
 	# Check platform
 	if ($platform eq 'linux') {
 		chomp($sudo = `which sudo`);
@@ -845,28 +866,6 @@ MAIN: {
 			print "StorCLI not found!\n";
 			exit(STATE_UNKNOWN);
 		}
-	}
-
-	if ( !(GetOptions(
-		'h|help' => sub {displayHelp();},
-		'v|verbose' => sub {$VERBOSITY = 1 },
-		'vv' => sub {$VERBOSITY = 2},
-		'vvv' => sub {$VERBOSITY = 3},
-		'V|version' => sub {displayVersion($sudo, $storcli);},
-		'C|controller=i' => \$controller,
-		'EID|enclosure=s' => \@enclosures,
-		'LD|logicaldevice=s' => \@logDevices,
-		'PD|physicaldevice=s' => \@physDevices,
-		'Tw|temperature-warn=s' => \@temperature_w,
-		'Tc|temperature-critical=s' => \@temperature_c,
-		'PDTw|physicaldevicetemperature-warn=s' => \@physicalDeviceTemperature_w,
-		'PDTc|physicaldevicetemperature-critical=s' => \@physicalDeviceTemperature_c,
-		'p|path=s' => \$storcli,
-		'b|BBU=i' => \$bbu
-	)))	{
-		print $NAME . " Version: " . $VERSION ."\n";
-		displayUsage();
-		exit(STATE_UNKNOWN);
 	}
 
 	# Input validation
