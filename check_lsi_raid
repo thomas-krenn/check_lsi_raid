@@ -748,6 +748,60 @@ sub getBBUStatus {
 	}
 }
 
+# Returns information about:
+# - Cache Vault module status
+# - Temperature, Firmware, GasGauge
+sub getCVStatus {
+	my $sudo = $_[0];
+	my $storcli = $_[1];
+	my $controller = $_[2];
+
+	my $command = "$sudo $storcli /c$controller/cv show status";
+	my $status = 0;
+	my $statusMessage = '';
+
+	my @output = `$command`;
+
+	if($output[1] eq "Status = Success\n") {
+		my $blockid = 0;
+		foreach my $line (@output) {
+			my $first;
+			my $last;
+			if($line =~ /^([a-zA-Z0-9]*)/) {
+				$first = $1;
+				if($first eq 'Cachevault_Info' || $first eq 'Firmware_Status' || $first eq 'GasGaugeStatus') {
+					$blockid++;
+				}
+				if($line =~ /([a-zA-Z0-9]*)$/) {
+					$last = $1;
+					# Check Cachevault_Info block
+					if ($blockid eq 1) {
+						if($first eq "State") {
+							if($last ne "Optimal") {
+								$status = getExitState($status, STATE_WARNING);
+								$statusMessage .= "CV state not optimal, ";
+							}
+						}
+					}
+					# Check BBU_Firmware_Status
+					if ($blockid eq 2) {
+						if($first eq "Replacement") {
+							if($last ne "No") {
+								$status = getExitState($status, STATE_WARNING);
+								$statusMessage .= "CV replacement required, ";
+							}
+						}
+					}
+				}
+			}
+		}
+		return ($status, $statusMessage);
+	} else {
+		print "Invalid StorCLI command!\n";
+		exit(STATE_UNKNOWN);
+	}
+}
+
 # Checks if wheter BBU or CV is present
 # - One of the two show commands must return 'Success'
 sub checkBBUorCVIsPresent{
@@ -930,6 +984,11 @@ MAIN: {
 	}
 	if($bbuPresent == 1){
 		($newexitstatus, $statusMessage) = getBBUStatus($sudo, $storcli, $controller);
+		$newstatusMessage .= $statusMessage;
+		$exitstatus = getExitState($newexitstatus, $exitstatus);
+	}
+	if($cvPresent == 1){
+		($newexitstatus, $statusMessage) = getCVStatus($sudo, $storcli, $controller);
 		$newstatusMessage .= $statusMessage;
 		$exitstatus = getExitState($newexitstatus, $exitstatus);
 	}
