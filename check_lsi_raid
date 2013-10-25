@@ -768,16 +768,16 @@ sub getCVStatus {
 				next;
 			}
 			if(defined($currBlock)){
-				if($currBlock eq 'Cachevault_Info' && $line =~ '^State'){
-					$line =~ /([a-zA-Z0-9]*)$/;
+				if($currBlock eq 'Cachevault_Info' && $line =~ /^State/){
+					$line =~ /([a-zA-Z0-9]*) $/;
 					if($1 ne "Optimal") {
 						$status = getExitState($status, STATE_WARNING);
 						if($VERBOSITY == 0){$statusMessage .= "CV state not optimal, ";}
 						if($VERBOSITY >= 1){$statusMessage .= "CV Cachevault_Info state $1, "; }
 					}
 				}
-				elsif($currBlock eq 'Firmware_Status' && $line =~ '^Replacement required'){
-					$line =~ /([a-zA-Z0-9]*)$/;
+				elsif($currBlock eq 'Firmware_Status' && $line =~ /^Replacement required/){
+					$line =~ /([a-zA-Z0-9]*) $/;
 					if($1 ne "No") {
 						$status = getExitState($status, STATE_WARNING);
 						$statusMessage .= "CV replacement required, ";
