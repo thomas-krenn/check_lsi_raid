@@ -755,43 +755,31 @@ sub getCVStatus {
 	my $sudo = $_[0];
 	my $storcli = $_[1];
 	my $controller = $_[2];
-
 	my $command = "$sudo $storcli /c$controller/cv show status";
 	my $status = 0;
 	my $statusMessage = '';
 
 	my @output = `$command`;
-
 	if($output[1] eq "Status = Success\n") {
 		my $blockid = 0;
 		foreach my $line (@output) {
-			my $first;
-			my $last;
-			if($line =~ /^([a-zA-Z0-9]*)/) {
-				$first = $1;
-				if($first eq 'Cachevault_Info' || $first eq 'Firmware_Status' || $first eq 'GasGaugeStatus') {
-					$blockid++;
+			if($line =~ /^(Cachevault_Info|Firmware_Status|GasGaugeStatus)/){
+				$blockid++;
+				next;
+			}
+			if($blockid == 1 && $line =~ '^State'){
+				$line =~ /([a-zA-Z0-9]*)$/;
+				if($1 ne "Optimal") {
+					$status = getExitState($status, STATE_WARNING);
+					if($VERBOSITY == 0){$statusMessage .= "CV state not optimal, ";}
+					if($VERBOSITY >= 1){$statusMessage .= "CV Cachevault_Info state $1, "; }
 				}
-				if($line =~ /([a-zA-Z0-9]*)$/) {
-					$last = $1;
-					# Check Cachevault_Info block
-					if ($blockid eq 1) {
-						if($first eq "State") {
-							if($last ne "Optimal") {
-								$status = getExitState($status, STATE_WARNING);
-								$statusMessage .= "CV state not optimal, ";
-							}
-						}
-					}
-					# Check BBU_Firmware_Status
-					if ($blockid eq 2) {
-						if($first eq "Replacement") {
-							if($last ne "No") {
-								$status = getExitState($status, STATE_WARNING);
-								$statusMessage .= "CV replacement required, ";
-							}
-						}
-					}
+			}
+			if($blockid == 2 && $line =~ '^Replacement required'){
+				$line =~ /([a-zA-Z0-9]*)$/;
+				if($1 ne "No") {
+					$status = getExitState($status, STATE_WARNING);
+					$statusMessage .= "CV replacement required, ";
 				}
 			}
 		}
