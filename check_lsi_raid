@@ -76,7 +76,8 @@ sub displayUsage {
 	print "  [ -PDTw | --physicaldevicetemperature-warn ]\n	Specifies the disk temperature warning range, default is ${PD_TEMP_WARNING}C or more\n";
 	print "  [ -PDTc | --physicaldevicetemperature-critical ]\n	Specifies the disk temperature critical error range, default is ${PD_TEMP_CRITICAL}C or more\n";
 	print "  [ -p <path> | --path <path>]\n	Specifies the path to StorCLI, default is /usr/bin/storcli or C:\\Programme\\...\\storcli.exe\n";
-	print "  [ -b <0/1> | BBU <0/1> ]\n	Boolean Value which specifies if an Battery Backup Unit is present (1 is present/0 is not present). Default is 1\n	This option is only needed if you have an LSI-Raid Controller without a Battery Backup Unit.\n";
+	print "  [ -b <0/1> | BBU <0/1> ]\n	Check if a BBU or a CacheVault module is present. One must be present unless '-b 0' is defined.
+	This ensures that for a given controller a BBU/CV must be present per default.\n";
 }
 
 # Displays a short Help text for the user
@@ -338,7 +339,7 @@ sub getLogicalDeviceStatus {
 	my @logDevices = @{($_[3])};
 	my $action = $_[4];
 
-	my $command = "$sudo $storcli /c$controller ";
+	my $command = "$sudo $storcli /c$controller";
 	my $status = 0; # Return Status
 	my $statusMessage = ''; # Return String
 
@@ -746,6 +747,29 @@ sub getBBUStatus {
 	}
 }
 
+sub checkBBUorCVIsPresent{
+	my $sudo = $_[0];
+	my $storcli = $_[1];
+	my $controller = $_[2];
+	my $status = 0;
+	my $statusMessage = '';
+
+	my ($bbu,$cv);
+	my $command = "$sudo $storcli /c$controller/bbu show";
+	my @output = `$command`;
+	if($output[1] eq "Status = Success\n") {
+		$bbu = 1;
+	}
+	else{$bbu = 0};
+	$command = "$sudo $storcli /c$controller/cv show";
+	@output = `$command`;
+	if($output[1] eq "Status = Success\n") {
+		$cv = 1;
+	}
+	else{$cv = 0};
+	return ($bbu, $cv);
+}
+
 # Nagios development guidelines: temperature threshold sheme
 # http://nagiosplug.sourceforge.net/developer-guidelines.html#THRESHOLDFORMAT
 # Returns a temperature range (array) in or out which a temperature should be
@@ -874,37 +898,11 @@ MAIN: {
 		print "Invalid controller number, device not found!\n";
 		exit(STATE_UNKNOWN);
 	}
-	if(($bbu ne "1") && ($bbu ne "0")) {
-		print "Invalid BBU parameter, must be 0 or 1!\n";
+	if(($bbu != 1) && ($bbu != 0)) {
+		print "Invalid BBU/CV parameter, must be 0 or 1!\n";
 		exit(STATE_UNKNOWN);
-	} else {
-		if($bbu eq "1") {
-			my @bbucheck = `$sudo $storcli /c$controller/bbu show`;
-			my $flag = 0;
-			my $found = 0;
-			foreach my $line (@bbucheck) {
-				if($flag > 0) {
-					$flag--;
-				} elsif($line =~ /^([a-zA-Z]*)/) {
-					if($1 eq "Model") {
-						$flag = 2;
-					}
-				}
-				if($flag eq 0) {
-					my @values = split(' ', $line);
-					if(defined($values[6])) {
-						if($values[6] =~ /^([0-9]{4}\/[0-9]{2}\/[0-9]{2})$/) {
-							$found = 1;
-						}
-					}
-				}
-			}
-			if($found eq 0) {
-				print "No battery backup unit found for controller $controller!\n";
-				exit(STATE_UNKNOWN);
-			}
-		}
 	}
+
 	@enclosures = split(/,/,join(',', @enclosures));
 	@logDevices = split(/,/,join(',', @logDevices));
 	@physDevices = split(/,/,join(',', @physDevices));
@@ -919,6 +917,19 @@ MAIN: {
 	my $newstatusMessage = '';
 	($newexitstatus, $statusMessage) = getControllerStatus($sudo, $storcli, $controller, \@temperature_w, \@temperature_c);
 	$newstatusMessage .= $statusMessage;
+	my ($bbuPresent,$cvPresent);
+	if($bbu == 1){
+		($bbuPresent,$cvPresent) = checkBBUorCVIsPresent($sudo, $storcli, $controller);
+		if($bbuPresent == 0 && $cvPresent == 0){
+			$exitstatus = getExitState(STATE_CRITICAL, $exitstatus);
+			$newstatusMessage .= "No BBU or CV found, ";
+		}
+	}
+	if($bbuPresent == 1){
+		($newexitstatus, $statusMessage) = getBBUStatus($sudo, $storcli, $controller);
+		$newstatusMessage .= $statusMessage;
+		$exitstatus = getExitState($newexitstatus, $exitstatus);
+	}
 	$exitstatus = getExitState($newexitstatus, $exitstatus);
 	($newexitstatus, $statusMessage) = getLogicalDeviceStatus($sudo, $storcli, $controller, \@logDevices, "init");
 	$newstatusMessage .= $statusMessage;
@@ -935,11 +946,6 @@ MAIN: {
 	($newexitstatus, $statusMessage) = getPhysDeviceStatus($sudo, $storcli, $controller, \@enclosures, \@physDevices, \@physicalDeviceTemperature_w, \@physicalDeviceTemperature_c, "all");
 	$newstatusMessage .= $statusMessage;
 	$exitstatus = getExitState($newexitstatus, $exitstatus);
-	if($bbu) {
-		($newexitstatus, $statusMessage) = getBBUStatus($sudo, $storcli, $controller);
-		$newstatusMessage .= $statusMessage;
-		$exitstatus = getExitState($newexitstatus, $exitstatus);
-	}
 	if($exitstatus == 0) { print "LSIRAID OK (Ctrl #$controller)\n"; }
 	elsif($exitstatus == 1) { chop($newstatusMessage); chop($newstatusMessage); print "LSIRAID WARNING (Ctrl #$controller): [$newstatusMessage]\n"; }
 	elsif($exitstatus == 2) { chop($newstatusMessage); chop($newstatusMessage); print "LSIRAID CRITICAL (Ctrl #$controller): [$newstatusMessage]\n"; }
