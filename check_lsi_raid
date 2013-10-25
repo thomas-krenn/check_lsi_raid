@@ -10,6 +10,7 @@
 #   Grubhofer Martin    (s1110239013@students.fh-hagenberg.at)
 #   Scheipner Alexander (s1110239032@students.fh-hagenberg.at)
 #   Werner Sebastian    (s1110239038@students.fh-hagenberg.at)
+#   Georg Schoenberger  (gschoenberger@thomas-krenn.com)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -747,6 +748,8 @@ sub getBBUStatus {
 	}
 }
 
+# Checks if wheter BBU or CV is present
+# - One of the two show commands must return 'Success'
 sub checkBBUorCVIsPresent{
 	my $sudo = $_[0];
 	my $storcli = $_[1];
