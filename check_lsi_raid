@@ -761,25 +761,27 @@ sub getCVStatus {
 
 	my @output = `$command`;
 	if($output[1] eq "Status = Success\n") {
-		my $blockid = 0;
+		my $currBlock;
 		foreach my $line (@output) {
-			if($line =~ /^(Cachevault_Info|Firmware_Status|GasGaugeStatus)/){
-				$blockid++;
+			if($line =~ /^(Cachevault_Info|Firmware_Status)/){
+				$currBlock = $1;
 				next;
 			}
-			if($blockid == 1 && $line =~ '^State'){
-				$line =~ /([a-zA-Z0-9]*)$/;
-				if($1 ne "Optimal") {
-					$status = getExitState($status, STATE_WARNING);
-					if($VERBOSITY == 0){$statusMessage .= "CV state not optimal, ";}
-					if($VERBOSITY >= 1){$statusMessage .= "CV Cachevault_Info state $1, "; }
+			if(defined($currBlock)){
+				if($currBlock eq 'Cachevault_Info' && $line =~ '^State'){
+					$line =~ /([a-zA-Z0-9]*)$/;
+					if($1 ne "Optimal") {
+						$status = getExitState($status, STATE_WARNING);
+						if($VERBOSITY == 0){$statusMessage .= "CV state not optimal, ";}
+						if($VERBOSITY >= 1){$statusMessage .= "CV Cachevault_Info state $1, "; }
+					}
 				}
-			}
-			if($blockid == 2 && $line =~ '^Replacement required'){
-				$line =~ /([a-zA-Z0-9]*)$/;
-				if($1 ne "No") {
-					$status = getExitState($status, STATE_WARNING);
-					$statusMessage .= "CV replacement required, ";
+				elsif($currBlock eq 'Firmware_Status' && $line =~ '^Replacement required'){
+					$line =~ /([a-zA-Z0-9]*)$/;
+					if($1 ne "No") {
+						$status = getExitState($status, STATE_WARNING);
+						$statusMessage .= "CV replacement required, ";
+					}
 				}
 			}
 		}
