@@ -25,11 +25,25 @@
    o It is written in Perl and uses the Storage Command Line Tool ("Storcli")
      to interact with the RAID Controller.
 
+ Mailing List:
+ -------------
+   o tk-monitoring-plugins-user@lists.thomas-krenn.com
+   o Archive:
+     + http://lists.thomas-krenn.com/pipermail/tk-monitoring-plugins-user/
+
  Current Version:
  ----------------
    o The current version of the check_lsi_raid plugin is available at the
      Thomas Krenn git-server:
    o http://git.thomas-krenn.com/check_lsi_raid.git
+
+ Further information:
+ --------------------
+   o A wiki article can be found at:
+     + http://www.thomas-krenn.com/de/wiki/LSI_RAID_Monitoring_Plugin or
+     + http://www.thomas-krenn.com/en/wiki/LSI_RAID_Monitoring_Plugin
+   o Windows user should read:
+     + http://www.thomas-krenn.com/de/wiki/LSI_RAID_Monitoring_Plugin_unter_Windows_Server_2012_einrichten
 
  Functionalities:
  ----------------
