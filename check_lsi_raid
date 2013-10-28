@@ -73,9 +73,11 @@ sub displayUsage {
 	print "  [ -LD | --logicaldevice ]\n	Specifies one or more Logical Devices, defaults to all\n	Takes either an integer as additional argument (>=0) or a comma seperated list(0,1,2,3,...)\n";
 	print "  [ -PD | --physicaldevice ]\n	Specifies one or more Physical Devices, defaults to all\n	Takes either an integer as additional argument (>=0) or a comma seperated list(0,1,2,3,...)\n";
 	print "  [ -Tw | --temperature-warn ]\n	Specifies the RAID-Controller temperature warning range, default is ${C_TEMP_WARNING}C or more\n";
-	print "  [ -Tc | --temperature-critical ]\n	Specifies the RAID-Controller temperature critical error range, default is ${C_TEMP_CRITICAL}C or more\n";
+	print "  [ -Tc | --temperature-critical ]\n	Specifies the RAID-Controller temperature critical error range, default is ${C_TEMP_CRITICAL}C or more.
+	Requires -Tw | --temperature-warn to be set.\n";
 	print "  [ -PDTw | --physicaldevicetemperature-warn ]\n	Specifies the disk temperature warning range, default is ${PD_TEMP_WARNING}C or more\n";
-	print "  [ -PDTc | --physicaldevicetemperature-critical ]\n	Specifies the disk temperature critical error range, default is ${PD_TEMP_CRITICAL}C or more\n";
+	print "  [ -PDTc | --physicaldevicetemperature-critical ]\n	Specifies the disk temperature critical error range, default is ${PD_TEMP_CRITICAL}C or more.
+	Requires -PDTw | --physicaldevicetemperature-warn to be set.\n";
 	print "  [ -p <path> | --path <path>]\n	Specifies the path to StorCLI, default is /usr/bin/storcli or C:\\Programme\\...\\storcli.exe\n";
 	print "  [ -b <0/1> | BBU <0/1> ]\n	Check if a BBU or a CacheVault module is present. One must be present unless '-b 0' is defined.
 	This ensures that for a given controller a BBU/CV must be present per default.\n";
@@ -954,8 +956,19 @@ MAIN: {
 	@enclosures = split(/,/,join(',', @enclosures));
 	@logDevices = split(/,/,join(',', @logDevices));
 	@physDevices = split(/,/,join(',', @physDevices));
+	# check given thresholds
+	if(@temperature_c && !@temperature_w){
+		print "Please also specify warning threshold!\n";
+		displayUsage();
+		exit(STATE_UNKNOWN);
+	}
 	@temperature_w = getThresholds(\@temperature_w, $C_TEMP_WARNING);
 	@temperature_c = getThresholds(\@temperature_c, $C_TEMP_CRITICAL);
+	if(@physicalDeviceTemperature_c && !@physicalDeviceTemperature_w){
+		print "Please also specify PD warning threshold!\n";
+		displayUsage();
+		exit(STATE_UNKNOWN);
+	}
 	@physicalDeviceTemperature_w = getThresholds(\@physicalDeviceTemperature_w, $PD_TEMP_WARNING);
 	@physicalDeviceTemperature_c = getThresholds(\@physicalDeviceTemperature_c, $PD_TEMP_CRITICAL);
 
