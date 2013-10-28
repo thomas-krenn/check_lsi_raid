@@ -978,6 +978,7 @@ MAIN: {
 	my $newstatusMessage = '';
 	($newexitstatus, $statusMessage) = getControllerStatus($sudo, $storcli, $controller, \@temperature_w, \@temperature_c);
 	$newstatusMessage .= $statusMessage;
+	$exitstatus = getExitState($newexitstatus, $exitstatus);
 	my ($bbuPresent,$cvPresent);
 	if($bbu == 1){
 		($bbuPresent,$cvPresent) = checkBBUorCVIsPresent($sudo, $storcli, $controller);
@@ -996,7 +997,6 @@ MAIN: {
 		$newstatusMessage .= $statusMessage;
 		$exitstatus = getExitState($newexitstatus, $exitstatus);
 	}
-	$exitstatus = getExitState($newexitstatus, $exitstatus);
 	($newexitstatus, $statusMessage) = getLogicalDeviceStatus($sudo, $storcli, $controller, \@logDevices, "init");
 	$newstatusMessage .= $statusMessage;
 	$exitstatus = getExitState($newexitstatus, $exitstatus);
