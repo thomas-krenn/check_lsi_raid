@@ -374,13 +374,17 @@ sub getLogicalDeviceStatus {
 							if ($VERBOSITY == 0) {$statusMessage .= "Virtual disk state not optimal, "; }
 							if ($VERBOSITY >= 1) {$statusMessage .= "Virtual disk $output_dev state not optimal ($values[2]), "; }
 						} else {
-							$status = getExitState($status, STATE_CRITICAL);
-							if ($VERBOSITY == 0) {$statusMessage .= "Virtual disk state not optimal - not consistant, "; }
-							if ($VERBOSITY >= 1) {$statusMessage .= "Virtual disk $output_dev is not optimal - not consistant (state $values[2]), "; }
+							# cachecade volumes cannot be checked for consistency
+							if($values[4] ne "Yes" && $values[1] ne "Cac1"){
+								$status = getExitState($status, STATE_CRITICAL);
+								if ($VERBOSITY == 0) {$statusMessage .= "Virtual disk state not optimal - not consistant, "; }
+								if ($VERBOSITY >= 1) {$statusMessage .= "Virtual disk $output_dev is not optimal - not consistant (state $values[2]), "; }
+							}
 						}
 					}
 					else {
-						if($values[4] ne "Yes") {
+						# cachecade volumes cannot be checked for consistency
+						if($values[4] ne "Yes" && $values[1] ne "Cac1"){
 							$status = getExitState($status, STATE_WARNING);
 							if ($VERBOSITY == 0) {$statusMessage .= "Virtual disk state optimal, but not consistent, "; }
 							if ($VERBOSITY >= 1) {$statusMessage .= "Virtual disk $output_dev state optimal, but not consistent, "; }
