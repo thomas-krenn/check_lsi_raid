@@ -84,7 +84,7 @@ sub displayUsage {
 	print "  [ -Ip | --ignore-predictive-fail-count ]\n	Specifies the warhing threshold for predictive fail count per disk, default is $ignerr_p.\n";
 	print "  [ -Is | --ignore-shield-counter ]\n	Specifies the warning threshold for shield counter per disk, default is $ignerr_s.\n";
 	print "  [ -p <path> | --path <path>]\n	Specifies the path to StorCLI, default is /usr/bin/storcli or C:\\Programme\\...\\storcli.exe\n";
-	print "  [ -b <0/1> | BBU <0/1> ]\n	Check if a BBU or a CacheVault module is present. One must be present unless '-b 0' is defined.
+	print "  [ -b <0/1> | --BBU <0/1> ]\n	Check if a BBU or a CacheVault module is present. One must be present unless '-b 0' is defined.
 	This ensures that for a given controller a BBU/CV must be present per default.\n";
 }
 
@@ -374,8 +374,8 @@ sub getLogicalDeviceStatus {
 					$flag = -1;
 					my @values = split(' ',$line);
 					if($values[2] ne "Optl") {
+						$status = getExitState($status, STATE_CRITICAL);
 						if($values[1] ne 'Cac1'){
-							$status = getExitState($status, STATE_CRITICAL);
 							#check for consistency
 							if($values[4] eq 'Yes'){
 								if ($VERBOSITY == 0) {$statusMessage .= "Virtual disk state not optimal, "; }
