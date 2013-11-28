@@ -36,6 +36,7 @@ our $C_TEMP_WARNING = 80;
 our $C_TEMP_CRITICAL = 90;
 our $PD_TEMP_WARNING = 40;
 our $PD_TEMP_CRITICAL = 45;
+our ($ignerr_m, $ignerr_o, $ignerr_p, $ignerr_s) = (0, 0, 0, 0);
 
 use constant {
 	STATE_OK => 0,
@@ -78,6 +79,10 @@ sub displayUsage {
 	print "  [ -PDTw | --physicaldevicetemperature-warn ]\n	Specifies the disk temperature warning range, default is ${PD_TEMP_WARNING}C or more\n";
 	print "  [ -PDTc | --physicaldevicetemperature-critical ]\n	Specifies the disk temperature critical error range, default is ${PD_TEMP_CRITICAL}C or more.
 	Requires -PDTw | --physicaldevicetemperature-warn to be set.\n";
+	print "  [ -Im | --ignore-media-errors ]\n	Specifies the warning threshold for media errors per disk, default is $ignerr_m.\n";
+	print "  [ -Io | --ignore-other-errors ]\n	Specifies the warning threshold for other errors per disk, default is $ignerr_o.\n";
+	print "  [ -Ip | --ignore-predictive-fail-count ]\n	Specifies the warhing threshold for predictive fail count per disk, default is $ignerr_p.\n";
+	print "  [ -Is | --ignore-shield-counter ]\n	Specifies the warning threshold for shield counter per disk, default is $ignerr_s.\n";
 	print "  [ -p <path> | --path <path>]\n	Specifies the path to StorCLI, default is /usr/bin/storcli or C:\\Programme\\...\\storcli.exe\n";
 	print "  [ -b <0/1> | BBU <0/1> ]\n	Check if a BBU or a CacheVault module is present. One must be present unless '-b 0' is defined.
 	This ensures that for a given controller a BBU/CV must be present per default.\n";
@@ -370,6 +375,7 @@ sub getLogicalDeviceStatus {
 					my @values = split(' ',$line);
 					if($values[2] ne "Optl") {
 						if($values[1] ne 'Cac1'){
+							$status = getExitState($status, STATE_CRITICAL);
 							#check for consistency
 							if($values[4] eq 'Yes'){
 								if ($VERBOSITY == 0) {$statusMessage .= "Virtual disk state not optimal, "; }
@@ -488,27 +494,27 @@ sub getPhysDeviceStatus {
 					} elsif($values[0] =~ /^[a-zA-Z\.]*/) {
 						# Check the drive state in block Detailed information
 						if($values[0] eq "Shield") {
-							if($values[3] ne "0") {
+							if($values[3] > $ignerr_s) {
 								$status = getExitState($status, STATE_WARNING);
-								if ($VERBOSITY == 0) {$statusMessage .= "Shield counter (phys. drive) not 0, "; }
-								if ($VERBOSITY == 1) {$statusMessage .= "Physical drive $output_dev: shield counter not 0, "; }
-								if ($VERBOSITY >= 2) {$statusMessage .= "Physical drive $output_dev in enclosure $output_enc: shield counter not 0, "; }
+								if ($VERBOSITY == 0) {$statusMessage .= "Shield counter (phys. drive) $values[3] (>$ignerr_s), "; }
+								if ($VERBOSITY == 1) {$statusMessage .= "Physical drive $output_dev: shield counter $values[3] (>$ignerr_s), "; }
+								if ($VERBOSITY >= 2) {$statusMessage .= "Physical drive $output_dev in enclosure $output_enc: shield counter $values[3] (>$ignerr_s), "; }
 							}
 						}
 						elsif($values[0] eq "Media") {
-							if($values[4] ne "0") {
+							if($values[4] > $ignerr_m) {
 								$status = getExitState($status, STATE_WARNING);
-								if ($VERBOSITY == 0) {$statusMessage .= "Media error count (phys. drive) not 0, "; }
-								if ($VERBOSITY == 1) {$statusMessage .= "Physical drive $output_dev: media error count not 0, "; }
-								if ($VERBOSITY >= 2) {$statusMessage .= "Physical drive $output_dev in enclosure $output_enc: media error count not 0, "; }
+								if ($VERBOSITY == 0) {$statusMessage .= "Media error count (phys. drive) $values[4] (>$ignerr_m), "; }
+								if ($VERBOSITY == 1) {$statusMessage .= "Physical drive $output_dev: media error count $values[4] (>$ignerr_m), "; }
+								if ($VERBOSITY >= 2) {$statusMessage .= "Physical drive $output_dev in enclosure $output_enc: media error count $values[4] (>$ignerr_m), "; }
 							}
 						}
 						elsif($values[0] eq "Other") {
-							if($values[4] ne "0") {
+							if($values[4] > $ignerr_o) {
 								$status = getExitState($status, STATE_WARNING);
-								if ($VERBOSITY == 0) {$statusMessage .= "Other error count (phys. drive) not 0, "; }
-								if ($VERBOSITY == 1) {$statusMessage .= "Physical drive $output_dev: media error count not 0, "; }
-								if ($VERBOSITY >= 2) {$statusMessage .= "Physical drive $output_dev in enclosure $output_enc: media error count not 0, "; }
+								if ($VERBOSITY == 0) {$statusMessage .= "Other error count (phys. drive) $values[4] (>$ignerr_o), "; }
+								if ($VERBOSITY == 1) {$statusMessage .= "Physical drive $output_dev: other error count $values[4] (>$ignerr_o), "; }
+								if ($VERBOSITY >= 2) {$statusMessage .= "Physical drive $output_dev in enclosure $output_enc: other error count $values[4] (>$ignerr_o), "; }
 							}
 						}
 						elsif($values[0] eq "Drive") {
@@ -580,11 +586,11 @@ sub getPhysDeviceStatus {
 							}
 						}
 						elsif($values[0] eq "Predictive") {
-							if($values[4] ne "0") {
+							if($values[4] > $ignerr_p) {
 								$status = getExitState($status, STATE_WARNING);
-								if ($VERBOSITY == 0) {$statusMessage .= "Phys. drive Predictive Fail Count not 0, "; }
-								if ($VERBOSITY == 1) {$statusMessage .= "Physical drive $output_dev: Predictive Fail Count not 0, "; }
-								if ($VERBOSITY >= 2) {$statusMessage .= "Physical drive $output_dev in enclosure $output_enc: Predictive Fail Count not 0, "; }
+								if ($VERBOSITY == 0) {$statusMessage .= "Phys. drive Predictive Fail Count $values[4] (>$ignerr_p), "; }
+								if ($VERBOSITY == 1) {$statusMessage .= "Physical drive $output_dev: Predictive Fail Count $values[4] (>$ignerr_p), "; }
+								if ($VERBOSITY >= 2) {$statusMessage .= "Physical drive $output_dev in enclosure $output_enc: Predictive Fail Count $values[4] (>$ignerr_p), "; }
 							}
 						}
 						elsif($values[0] eq "S.M.A.R.T") {
@@ -907,6 +913,10 @@ MAIN: {
 		'Tc|temperature-critical=s' => \@temperature_c,
 		'PDTw|physicaldevicetemperature-warn=s' => \@physicalDeviceTemperature_w,
 		'PDTc|physicaldevicetemperature-critical=s' => \@physicalDeviceTemperature_c,
+		'Im|ignore-media-errors=i' => \$ignerr_m,
+		'Io|ignore-other-errors=i' => \$ignerr_o,
+		'Ip|ignore-predictive-fail-count=i' => \$ignerr_p,
+		'Is|ignore-shield-counter=i' => \$ignerr_s,
 		'p|path=s' => \$storcli,
 		'b|BBU=i' => \$bbu
 	)))	{
@@ -985,7 +995,7 @@ MAIN: {
 	($newexitstatus, $statusMessage) = getControllerStatus($sudo, $storcli, $controller, \@temperature_w, \@temperature_c);
 	$newstatusMessage .= $statusMessage;
 	$exitstatus = getExitState($newexitstatus, $exitstatus);
-	my ($bbuPresent,$cvPresent);
+	my ($bbuPresent,$cvPresent) = (0,0);
 	if($bbu == 1){
 		($bbuPresent,$cvPresent) = checkBBUorCVIsPresent($sudo, $storcli, $controller);
 		if($bbuPresent == 0 && $cvPresent == 0){
@@ -1018,8 +1028,8 @@ MAIN: {
 	($newexitstatus, $statusMessage) = getPhysDeviceStatus($sudo, $storcli, $controller, \@enclosures, \@physDevices, \@physicalDeviceTemperature_w, \@physicalDeviceTemperature_c, "all");
 	$newstatusMessage .= $statusMessage;
 	$exitstatus = getExitState($newexitstatus, $exitstatus);
-	if($exitstatus == 0) { print "LSIRAID OK (Ctrl #$controller)\n"; }
-	elsif($exitstatus == 1) { chop($newstatusMessage); chop($newstatusMessage); print "LSIRAID WARNING (Ctrl #$controller): [$newstatusMessage]\n"; }
-	elsif($exitstatus == 2) { chop($newstatusMessage); chop($newstatusMessage); print "LSIRAID CRITICAL (Ctrl #$controller): [$newstatusMessage]\n"; }
+	if($exitstatus == 0) { print "LSIRAID OK (Ctrl #$controller) | STATUS=$exitstatus\n"; }
+	elsif($exitstatus == 1) { chop($newstatusMessage); chop($newstatusMessage); print "LSIRAID WARNING (Ctrl #$controller): [$newstatusMessage] | STATUS=$exitstatus\n"; }
+	elsif($exitstatus == 2) { chop($newstatusMessage); chop($newstatusMessage); print "LSIRAID CRITICAL (Ctrl #$controller): [$newstatusMessage] | STATUS=$exitstatus\n"; }
 	exit($exitstatus);
 }
