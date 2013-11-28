@@ -3,7 +3,8 @@ Changelog for check_lsi_raid, a Nagios/Icinga plugin to check LSI RAID
 controllers
 ###############################################################################
 
-Version 1.1 20131119 (Jonas Meurer <jmeurer@inet.de>)
+Version 1.1 20131128
+  * Thanks to Jonas Meurer <jmeurer@inet.de> for the patches
   * Minor fix: uninitialized variables for bbu=0
   * Typo fix: "other error count" instead of "media error count"
   * Output STATUS variable for nagios performance data processing
@@ -18,3 +19,10 @@ Version 1.0 20131028
   * Fix storcli path checking
   * Fix rebuild progress for physical devices
   * Fix temperature check for a real integer
+
+List of contributors:
+  * Grubhofer Martin    (s1110239013@students.fh-hagenberg.at)
+  * Scheipner Alexander (s1110239032@students.fh-hagenberg.at)
+  * Werner Sebastian    (s1110239038@students.fh-hagenberg.at)
+  * Georg Schoenberger  (gschoenberger@thomas-krenn.com)
+  * Jonas Meurer        (jmeurer@inet.de)

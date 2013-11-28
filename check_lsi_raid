@@ -11,6 +11,7 @@
 #   Scheipner Alexander (s1110239032@students.fh-hagenberg.at)
 #   Werner Sebastian    (s1110239038@students.fh-hagenberg.at)
 #   Georg Schoenberger  (gschoenberger@thomas-krenn.com)
+#   Jonas Meurer        (jmeurer@inet.de)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -30,7 +31,7 @@ use warnings;
 use Getopt::Long qw(:config no_ignore_case);
 
 our $VERBOSITY = 0;
-our $VERSION = "1.0";
+our $VERSION = "1.1";
 our $NAME = "check_lsi_raid: Nagios/Icinga plugin to check LSI Raid Controller status";
 our $C_TEMP_WARNING = 80;
 our $C_TEMP_CRITICAL = 90;
@@ -764,7 +765,7 @@ sub getBBUStatus {
 
 # Returns information about:
 # - Cache Vault module status
-# - Temperature, Firmware, GasGauge
+# - If CacheVault must be replaced
 sub getCVStatus {
 	my $sudo = $_[0];
 	my $storcli = $_[1];
