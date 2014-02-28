@@ -128,11 +128,15 @@ sub displayVersion {
 sub checkCommandStatus{
 	my @output = @{(shift)};
 	foreach my $line (@output){
-		if(($line =~ /^Status/) && ($line eq "Status = Success\n")){
-			return 1;
-		}
-		else{
-			return 0;
+		if($line =~ /^Status/){
+			if($line eq "Status = Success\n"){
+				print "true";
+				return 1;
+			}
+			else{
+				print "false";
+				return 0;
+			}
 		}
 	}
 }
