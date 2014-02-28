@@ -373,7 +373,7 @@ sub getLogicalDeviceStatus {
 	$command .= " show $action";
 	my @output = `$command`;
 
-	if(checkCommandStatus(\@output) {
+	if(checkCommandStatus(\@output)) {
 		if($action eq "all") {
 			my $output_dev = -1;
 			my $flag = -1;
@@ -472,7 +472,7 @@ sub getPhysDeviceStatus {
 	$command .= " show $action";
 	my @output = `$command`;
 
-	if(checkCommandStatus(\@output) {
+	if(checkCommandStatus(\@output)) {
 		if($action eq "all") {
 			my $output_enc = -1;
 			my $output_dev = -1;
@@ -666,7 +666,7 @@ sub getBBUStatus {
 
 	my @output = `$command`;
 
-	if(checkCommandStatus(\@output) {
+	if(checkCommandStatus(\@output)) {
 		my $blockid = 0;
 		foreach my $line (@output) {
 			my $first;
@@ -789,7 +789,7 @@ sub getCVStatus {
 	my $statusMessage = '';
 
 	my @output = `$command`;
-	if(checkCommandStatus(\@output) {
+	if(checkCommandStatus(\@output)) {
 		my $currBlock;
 		foreach my $line (@output) {
 			if($line =~ /^(Cachevault_Info|Firmware_Status)/){
@@ -834,13 +834,13 @@ sub checkBBUorCVIsPresent{
 	my ($bbu,$cv);
 	my $command = "$sudo $storcli /c$controller/bbu show";
 	my @output = `$command`;
-	if(checkCommandStatus(\@output) {
+	if(checkCommandStatus(\@output)) {
 		$bbu = 1;
 	}
 	else{$bbu = 0};
 	$command = "$sudo $storcli /c$controller/cv show";
 	@output = `$command`;
-	if(checkCommandStatus(\@output) {
+	if(checkCommandStatus(\@output)) {
 		$cv = 1;
 	}
 	else{$cv = 0};
