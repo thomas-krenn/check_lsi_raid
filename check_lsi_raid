@@ -125,6 +125,18 @@ sub displayVersion {
 	exit(STATE_OK);
 }
 
+sub checkCommandStatus{
+	my @output = @{(shift)};
+	foreach my $line (@output){
+		if(($line =~ /^Status/) && ($line eq "Status = Success\n")){
+			return 1;
+		}
+		else{
+			return 0;
+		}
+	}
+}
+
 # Returns information about:
 #		- Controller status and controller temperature
 sub getControllerStatus {
@@ -140,7 +152,7 @@ sub getControllerStatus {
 
 	my @output = `$command`;
 
-	if($output[1] eq "Status = Success\n") {
+	if(checkCommandStatus(\@output)) {
 		foreach my $line (@output) {
 			my $first;
 			my $last;
