@@ -949,8 +949,17 @@ MAIN: {
 			elsif ( -e '/opt/MegaRAID/storcli/storcli') {
 				$storcli = '/opt/MegaRAID/storcli/storcli'
 			}
+			elsif ( -e '/usr/sbin/storcli64') {
+				$storcli = '/usr/sbin/storcli64'
+			}
+			elsif ( -e '/usr/sbin/storcli') {
+				$storcli = '/usr/sbin/storcli'
+			}
 			else {
 				chomp($storcli= `which storcli`);
+				if ($storcli eq ''){
+					chomp($storcli= `which storcli64`);
+				}
 			}
 		}
 		unless ( -e $storcli && -x $sudo ) {
