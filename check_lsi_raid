@@ -167,7 +167,7 @@ sub getControllerStatus {
 					if($first eq "Controller") {
 						if($line =~ /\s+([a-zA-Z0-9]*)/) {
 							if($1 eq "Status") {
-								if($last ne "OK") {
+								if($last ne "OK" && $last ne "Optimal") {
 									$status = getExitState($status, STATE_WARNING);
 									$statusMessage .= "Ctrl. status not optimal, ";
 								}
