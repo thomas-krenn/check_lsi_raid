@@ -484,13 +484,13 @@ sub getPhysDeviceStatus {
 					# Check the overall drive state
 					$output_enc = $1;
 					$output_dev = $2;
-					$flag = 6;
+					$flag = 5;
 				} elsif($line =~ /^Drive\s\/c$controller\/e([0-9]*)\/s([0-9]*)\sState\s\:/) {
 					# Check the drive state in block Detailed information
 					$output_enc = $1;
 					$output_dev = $2;
 					$flag = 1;
-				} elsif($flag eq 0 && index($line, " ") eq -1) {
+				} elsif($flag eq 0 && ($line =~ /^\-{5,}$/ || $line =~ /^\s*$/)) {
 					# Detect the end of the block which was last checked
 					$flag = -1;
 				} elsif($flag eq 0) {
