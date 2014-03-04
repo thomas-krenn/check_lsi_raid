@@ -3,6 +3,12 @@ Changelog for check_lsi_raid, a Nagios/Icinga plugin to check LSI RAID
 controllers
 ###############################################################################
 
+Version 1.2 20140304
+  * Plugin is now working with current storcli 1.07.07
+  * Fix physical drive check as code did not reach the check
+  * Check for storcli on more paths
+  * Replace storli command return status in separate method
+
 Version 1.1 20131128
   * Thanks to Jonas Meurer <jmeurer@inet.de> for the patches
   * Minor fix: uninitialized variables for bbu=0
