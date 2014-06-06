@@ -348,7 +348,7 @@ sub getControllerStatus {
 		}
 		return ($status, $statusMessage);
 	} else {
-		print "Invalid StorCLI command!\n";
+		print "Invalid StorCLI command! ($command)\n";
 		exit(STATE_UNKNOWN);
 	}
 }
@@ -440,7 +440,7 @@ sub getLogicalDeviceStatus {
 		}
 		return ($status, $statusMessage);
 	} else {
-		print "Invalid StorCLI command!\n";
+		print "Invalid StorCLI command! ($command)\n";
 		exit(STATE_UNKNOWN);
 	}
 }
@@ -647,7 +647,7 @@ sub getPhysDeviceStatus {
 		}
 		return ($status, $statusMessage);
 	} else {
-		print "Invalid StorCLI command!\n";
+		print "Invalid StorCLI command! ($command)\n";
 		exit(STATE_UNKNOWN);
 	}
 }
@@ -772,7 +772,7 @@ sub getBBUStatus {
 		}
 		return ($status, $statusMessage);
 	} else {
-		print "Invalid StorCLI command!\n";
+		print "Invalid StorCLI command! ($command)\n";
 		exit(STATE_UNKNOWN);
 	}
 }
@@ -817,7 +817,7 @@ sub getCVStatus {
 		}
 		return ($status, $statusMessage);
 	} else {
-		print "Invalid StorCLI command!\n";
+		print "Invalid StorCLI command! ($command)\n";
 		exit(STATE_UNKNOWN);
 	}
 }
