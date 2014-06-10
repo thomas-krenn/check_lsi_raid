@@ -38,6 +38,7 @@ our $C_TEMP_CRITICAL = 90;
 our $PD_TEMP_WARNING = 40;
 our $PD_TEMP_CRITICAL = 45;
 our ($ignerr_m, $ignerr_o, $ignerr_p, $ignerr_s) = (0, 0, 0, 0);
+our $NOENCLOSURES = 0;
 
 use constant {
 	STATE_OK => 0,
@@ -87,6 +88,8 @@ sub displayUsage {
 	print "  [ -p <path> | --path <path>]\n	Specifies the path to StorCLI, default is /usr/bin/storcli or C:\\Programme\\...\\storcli.exe\n";
 	print "  [ -b <0/1> | --BBU <0/1> ]\n	Check if a BBU or a CacheVault module is present. One must be present unless '-b 0' is defined.
 	This ensures that for a given controller a BBU/CV must be present per default.\n";
+	print "  [ --noenclosures <0/1> ]\n	Specifies if enclosures are present or not. 0 means enclosures are
+	present (default), 1 states no enclosures are used (no 'eall' in storcli commands).\n"
 }
 
 # Displays a short Help text for the user
@@ -461,9 +464,11 @@ sub getPhysDeviceStatus {
 	my $status = 0;
 	my $statusMessage = '';
 
-	if(scalar(@enclosures) == 0) { $command .= "/eall"; }
-	elsif(scalar(@enclosures) == 1) { $command .= "/e$enclosures[0]"; }
-	else { $command .= "/e".join(",", @enclosures); }
+	if(!$NOENCLOSURES){
+		if(scalar(@enclosures) == 0) { $command .= "/eall"; }
+		elsif(scalar(@enclosures) == 1) { $command .= "/e$enclosures[0]"; }
+		else { $command .= "/e".join(",", @enclosures); }
+	}
 
 	if(scalar(@physDevices) == 0) { $command .= "/sall"; }
 	elsif(scalar(@physDevices) == 1) { $command .= "/s$physDevices[0]"; }
@@ -933,7 +938,8 @@ MAIN: {
 		'Ip|ignore-predictive-fail-count=i' => \$ignerr_p,
 		'Is|ignore-shield-counter=i' => \$ignerr_s,
 		'p|path=s' => \$storcli,
-		'b|BBU=i' => \$bbu
+		'b|BBU=i' => \$bbu,
+		'noenclosures=i' => \$NOENCLOSURES
 	)))	{
 		print $NAME . " Version: " . $VERSION ."\n";
 		displayUsage();
