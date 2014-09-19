@@ -359,14 +359,12 @@ sub getControllerStatus {
 # Returns information about:
 #		- Logical device status
 sub getLogicalDeviceStatus {
-	my $sudo = $_[0];
-	my $storcli = $_[1];
-	my $controller = $_[2];
-	my @logDevices = @{($_[3])};
-	my $action = $_[4];
+	my $storcli = $_[0];
+	my @logDevices = @{($_[1])};
+	my $action = $_[2];
 
-	my $command = "$sudo $storcli /c$controller";
-	my $status = 0; # Return Status
+	my $command = $storcli;
+	my $status = 0;
 	my $statusMessage = ''; # Return String
 
 	if(scalar(@logDevices) == 0) { $command .= "/vall"; }
@@ -905,8 +903,7 @@ sub getThresholds {
 }
 
 MAIN: {
-	my ($sudo, $noSudo);
-	my $storcli = '';
+	my ($storcli, $sudo, $noSudo);
 	my $controller = 0;
 	my @enclosures;
 	my @logDevices;
@@ -977,6 +974,10 @@ MAIN: {
 			$storcli = $sudo.' '.$storcli;
 		}
 	}
+	# Prepare storcli command
+	$storcli .= "/c$controller";	
+	
+	
 	# Input validation
 	#FIXME Replace with storcli show ctrlcount
 	my @controllerVersion = `$sudo $storcli /c$controller show all`;
