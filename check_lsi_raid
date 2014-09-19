@@ -47,6 +47,9 @@ use constant {
 	STATE_UNKNOWN => 3,
  };
 
+our @ldmap_a = ('DG/VD','TYPE','State','Access','Consist','Cache','Cac','sCC','Size');
+
+
 # Always return the highest state level
 sub getExitState {
 	my $returnState = STATE_OK;
@@ -374,76 +377,34 @@ sub getLogicalDeviceStatus {
 	$command .= " show $action";
 	my @output = `$command`;
 
+	my @logDevs;
 	if(checkCommandStatus(\@output)) {
 		if($action eq "all") {
-			my $output_dev = -1;
-			my $flag = -1;
-			#check for lines with /c0/vX and then go 6 lines forward
-			foreach my $line (@output) {
-				if($flag > 0) {
-					$flag--;
-				} elsif($line =~ /^\/c$controller\/v([0-9]*)/) {
-					$output_dev = $1;
-					$flag = 6;
+			my $currBlock;
+			foreach my $line(@output){
+				my @splittedLine;
+				if($line =~ /^\/c[0-9]*\/v([0-9]*.*)/){
+					$currBlock = $1;
+					next;
 				}
-				if($flag eq 0) {
-					$flag = -1;
-					my @values = split(' ',$line);
-					if($values[2] ne "Optl") {
-						$status = getExitState($status, STATE_CRITICAL);
-						if($values[1] ne 'Cac1'){
-							#check for consistency
-							if($values[4] eq 'Yes'){
-								if ($VERBOSITY == 0) {$statusMessage .= "Virtual disk state not optimal, "; }
-								if ($VERBOSITY >= 1) {$statusMessage .= "Virtual disk $output_dev state not optimal ($values[2]), "; }
+				if(defined($currBlock)){
+					if($line =~ /^\d+\/\d+\s+\w+\d\s+\w+.*/){
+						@splittedLine = map { s/^\s*//; s/\s*$//; $_; } split(/\s+/,$line);
+						my %lineValues_h;
+						# The current block is the c0/v0 name
+						$currBlock =~ /\w+/;
+						$lineValues_h{'ld'} = $currBlock;
+						for(my $i = 0; $i < @ldmap_a; $i++){
+								$lineValues_h{$ldmap_a[$i]} = $splittedLine[$i];
 							}
-							else{
-								if ($VERBOSITY == 0) {$statusMessage .= "Virtual disk state not optimal - not consistant, "; }
-								if ($VERBOSITY >= 1) {$statusMessage .= "Virtual disk $output_dev is not optimal - not consistant (state $values[2]), "; }
-							}
-						}
-						else{
-							if ($VERBOSITY == 0) {$statusMessage .= "Virtual cachecade disk state not optimal, "; }
-							if ($VERBOSITY >= 1) {$statusMessage .= "Virtual cachecade disk $output_dev state not optimal ($values[2]), "; }
-						}
-					}
-					else {
-						if($values[4] ne "Yes" && $values[1] ne "Cac1"){
-							$status = getExitState($status, STATE_WARNING);
-							if ($VERBOSITY == 0) {$statusMessage .= "Virtual disk state optimal - but not consistent, "; }
-							if ($VERBOSITY >= 1) {$statusMessage .= "Virtual disk $output_dev state optimal - but not consistent, "; }
-						}
-					}
-				}
-			}
-		} elsif($action eq "init") {
-			my $output_dev = -1;
-			my $flag = -1;
-			foreach my $line (@output) {
-				if($flag > 0 ) {
-					$flag--;
-				} elsif($line =~ /^VD\ Operation\ Status\ :/) {
-					$flag = 6;
-				}
-				if($flag eq 0) {
-					my @values = split(' ',$line);
-					if($values[0] =~ /^[0-9]*$/) {
-						if($values[3] ne "Not") {
-							$status = getExitState($status, STATE_WARNING);
-							if ($VERBOSITY == 0) {$statusMessage .= "Virtual disk initialization in progress, "; }
-							if ($VERBOSITY >= 1) {$statusMessage .= "Virtual disk $values[0] initialization in progress ($values[2] %), "; }
-						}
-					} else {
-						last;
+						push @logDevs, \%lineValues_h;
 					}
 				}
 			}
 		}
-		return ($status, $statusMessage);
-	} else {
-		print "Invalid StorCLI command! ($command)\n";
-		exit(STATE_UNKNOWN);
 	}
+	use Data::Dumper;
+	print Dumper(@logDevs);
 }
 
 # Returns information about:
