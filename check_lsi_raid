@@ -905,7 +905,7 @@ sub getThresholds {
 }
 
 MAIN: {
-	my $sudo = '';
+	my ($sudo, $noSudo);
 	my $storcli = '';
 	my $controller = 0;
 	my @enclosures;
@@ -939,56 +939,46 @@ MAIN: {
 		'Is|ignore-shield-counter=i' => \$ignerr_s,
 		'p|path=s' => \$storcli,
 		'b|BBU=i' => \$bbu,
-		'noenclosures=i' => \$NOENCLOSURES
+		'noenclosures=i' => \$NOENCLOSURES,
+		'nosudo' => \$noSudo,
 	)))	{
 		print $NAME . " Version: " . $VERSION ."\n";
 		displayUsage();
 		exit(STATE_UNKNOWN);
 	}
-	# Check platform
-	if ($platform eq 'linux') {
-		chomp($sudo = `which sudo`);
-		if ($storcli eq '') {
-			if ( -e '/opt/MegaRAID/storcli/storcli64') {
-				$storcli = '/opt/MegaRAID/storcli/storcli64'
-			}
-			elsif ( -e '/opt/MegaRAID/storcli/storcli') {
-				$storcli = '/opt/MegaRAID/storcli/storcli'
-			}
-			elsif ( -e '/usr/sbin/storcli64') {
-				$storcli = '/usr/sbin/storcli64'
-			}
-			elsif ( -e '/usr/sbin/storcli') {
-				$storcli = '/usr/sbin/storcli'
-			}
-			else {
-				chomp($storcli= `which storcli`);
-				if ($storcli eq ''){
-					chomp($storcli= `which storcli64`);
-				}
-			}
-		}
-		unless ( -e $storcli && -x $sudo ) {
-			print "No sudo rights or StorCLI not found!\n";
-			exit(STATE_UNKNOWN);
-		}
-	} else {
+	# Check smartclt tool
+	if(!defined($storcli)){
 		eval('use File::Which');
-		$sudo = '';
-		if ($storcli eq '') {
-			if (defined(which( 'storcli64.exe' )) ) {
-				$storcli = which( 'storcli64.exe' );
-			} elsif (defined(which( 'storcli.exe' ))) {
-				$storcli = which( 'storcli.exe' );
+		if ($platform eq 'linux'){
+			$storcli = which('storcli');
+			if(!defined($storcli)){
+				$storcli = which('storcli64');
 			}
 		}
-		unless ( -e $storcli ) {
-			print "StorCLI not found!\n";
-			exit(STATE_UNKNOWN);
+		else{
+			$storcli = which('storcli.exe');
+			if(!defined($storcli)){
+				$storcli = which('storcli64.exe');
+			}
 		}
 	}
-
+	if(! -x $storcli){
+		print "Error: cannot find storcli executable.\n";
+		exit(STATE_UNKNOWN);
+	}
+	if ($platform eq 'linux') {
+		if(!defined($noSudo)){
+			my $sudo;
+			chomp($sudo = `which sudo`);
+			if(! -x $sudo){
+				print "Error: cannot find sudo executable.\n";
+				exit(STATE_UNKNOWN);
+			}
+			$storcli = $sudo.' '.$storcli;
+		}
+	}
 	# Input validation
+	#FIXME Replace with storcli show ctrlcount
 	my @controllerVersion = `$sudo $storcli /c$controller show all`;
 	if($controllerVersion[2] eq "Description = Controller $controller not found\n") {
 		print "Invalid controller number, device not found!\n";
