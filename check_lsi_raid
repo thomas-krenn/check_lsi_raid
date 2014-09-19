@@ -449,8 +449,31 @@ sub getPhysDeviceStatus {
 						my %lineValues_h;
 						# The current block is the c0/e252/s0 name
 						$lineValues_h{'pd'} = $currBlock;
-						for(my $i = 0; $i < @ldmap_a; $i++){
-								$lineValues_h{$ldmap_a[$i]} = $splittedLine[$i];
+						my $j = 0;
+						for(my $i = 0; $i < @pdmap_a; $i++){
+								if($pdmap_a[$i] eq 'Size'){
+									my $size = $splittedLine[$j];
+									if($splittedLine[$j+1] eq 'GB' || $splittedLine[$j+1] eq 'TB'){
+										$size .= ''.$splittedLine[$j+1];
+										$j++;
+									}
+									$lineValues_h{$pdmap_a[$i]} = $size;
+									$j++;
+								}
+								elsif($pdmap_a[$i] eq 'Model'){
+									my $model = $splittedLine[$j];
+									# Model should be the next last element, j starts at 0
+									if(($j+2) != scalar(@splittedLine)){
+										$model .= ' '.$splittedLine[$j+1];
+										$j++;
+									}
+									$lineValues_h{$pdmap_a[$i]} = $model;
+									$j++;
+								}
+								else{
+									$lineValues_h{$pdmap_a[$i]} = $splittedLine[$j];
+									$j++;
+								}
 							}
 						push @physDevs, \%lineValues_h;
 					}
@@ -846,13 +869,13 @@ MAIN: {
 	$exitstatus = getExitState($newexitstatus, $exitstatus);
 	($newexitstatus, $statusMessage) = getLogicalDeviceStatus($storcli, \@logDevices, "all");
 	$newstatusMessage .= $statusMessage;
-	$exitstatus = getExitState($newexitstatus, $exitstatus);
-	($newexitstatus, $statusMessage) = getPhysDeviceStatus($sudo, $storcli, $controller, \@enclosures, \@physDevices, \@physicalDeviceTemperature_w, \@physicalDeviceTemperature_c, "initialization");
-	$newstatusMessage .= $statusMessage;
-	$exitstatus = getExitState($newexitstatus, $exitstatus);
-	($newexitstatus, $statusMessage) = getPhysDeviceStatus($sudo, $storcli, $controller, \@enclosures, \@physDevices, \@physicalDeviceTemperature_w, \@physicalDeviceTemperature_c, "rebuild");
-	$newstatusMessage .= $statusMessage;
-	$exitstatus = getExitState($newexitstatus, $exitstatus);
+#	$exitstatus = getExitState($newexitstatus, $exitstatus);
+#	($newexitstatus, $statusMessage) = getPhysDeviceStatus($sudo, $storcli, $controller, \@enclosures, \@physDevices, \@physicalDeviceTemperature_w, \@physicalDeviceTemperature_c, "initialization");
+#	$newstatusMessage .= $statusMessage;
+#	$exitstatus = getExitState($newexitstatus, $exitstatus);
+#	($newexitstatus, $statusMessage) = getPhysDeviceStatus($sudo, $storcli, $controller, \@enclosures, \@physDevices, \@physicalDeviceTemperature_w, \@physicalDeviceTemperature_c, "rebuild");
+#	$newstatusMessage .= $statusMessage;
+#	$exitstatus = getExitState($newexitstatus, $exitstatus);
 	($newexitstatus, $statusMessage) = getPhysDeviceStatus($sudo, $storcli, $controller, \@enclosures, \@physDevices, \@physicalDeviceTemperature_w, \@physicalDeviceTemperature_c, "all");
 	$newstatusMessage .= $statusMessage;
 	$exitstatus = getExitState($newexitstatus, $exitstatus);
