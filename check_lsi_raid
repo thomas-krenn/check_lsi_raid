@@ -437,6 +437,7 @@ sub getPhysDeviceStatus {
 	if(checkCommandStatus(\@output)) {
 		if($action eq "all") {
 			my $currBlock;
+			my %lineValues_h;
 			foreach my $line(@output){
 				my @splittedLine;
 				if($line =~ /^Drive \/(c[0-9]*\/e[0-9]*\/s[0-9]*) \:$/){
@@ -446,36 +447,45 @@ sub getPhysDeviceStatus {
 				if(defined($currBlock)){
 					if($line =~ /^\d+\:\d+\s+\d+\s+\w+\s+\d+.*/){
 						@splittedLine = map { s/^\s*//; s/\s*$//; $_; } split(/\s+/,$line);
-						my %lineValues_h;
 						# The current block is the c0/e252/s0 name
 						$lineValues_h{'pd'} = $currBlock;
 						my $j = 0;
 						for(my $i = 0; $i < @pdmap_a; $i++){
-								if($pdmap_a[$i] eq 'Size'){
-									my $size = $splittedLine[$j];
-									if($splittedLine[$j+1] eq 'GB' || $splittedLine[$j+1] eq 'TB'){
-										$size .= ''.$splittedLine[$j+1];
-										$j++;
-									}
-									$lineValues_h{$pdmap_a[$i]} = $size;
+							if($pdmap_a[$i] eq 'Size'){
+								my $size = $splittedLine[$j];
+								if($splittedLine[$j+1] eq 'GB' || $splittedLine[$j+1] eq 'TB'){
+									$size .= ''.$splittedLine[$j+1];
 									$j++;
 								}
-								elsif($pdmap_a[$i] eq 'Model'){
-									my $model = $splittedLine[$j];
-									# Model should be the next last element, j starts at 0
-									if(($j+2) != scalar(@splittedLine)){
-										$model .= ' '.$splittedLine[$j+1];
-										$j++;
-									}
-									$lineValues_h{$pdmap_a[$i]} = $model;
-									$j++;
-								}
-								else{
-									$lineValues_h{$pdmap_a[$i]} = $splittedLine[$j];
-									$j++;
-								}
+								$lineValues_h{$pdmap_a[$i]} = $size;
+								$j++;
 							}
+							elsif($pdmap_a[$i] eq 'Model'){
+								my $model = $splittedLine[$j];
+								# Model should be the next last element, j starts at 0
+								if(($j+2) != scalar(@splittedLine)){
+									$model .= ' '.$splittedLine[$j+1];
+									$j++;
+								}
+								$lineValues_h{$pdmap_a[$i]} = $model;
+								$j++;
+							}
+							else{
+								$lineValues_h{$pdmap_a[$i]} = $splittedLine[$j];
+								$j++;
+							}
+						}
+					}
+					if($line =~ /^(Shield Counter|Media Error Count|Other Error Count|
+						BBM Error Count|Drive Temperature|Predictive Failure Count|
+						S.M.A.R.T alert flagged by drive)\s\=\s(.*)$/){
+						$lineValues_h{$1} = $2;
+					}
+					# If the last value is parsed, set up for the next device
+					if(exists($lineValues_h{'S.M.A.R.T alert flagged by drive'})){
 						push @physDevs, \%lineValues_h;
+						unset $currBlock;
+						%lineValues_h = {};
 					}
 				}
 			}
