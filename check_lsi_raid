@@ -409,46 +409,40 @@ sub getLogicalDeviceStatus {
 # Returns information about:
 #		- Physical device status
 sub getPhysDeviceStatus {
-	my $storcli = $_[1];
-	my @enclosures = @{($_[3])};
-	my @physDevices = @{($_[4])};
-	my @physicalDeviceTemperature_w = @{($_[5])};
-	my @physicalDeviceTemperature_c = @{($_[6])};
-	my $action = $_[7];
+	my $storcli = $_[0];
+	my @enclosures = @{($_[1])};
+	my @physDevices = @{($_[2])};
+	my $action = $_[5];
 
 	my $command = $storcli;
-	my $status = 0;
-	my $statusMessage = '';
-
 	if(!$NOENCLOSURES){
 		if(scalar(@enclosures) == 0) { $command .= "/eall"; }
 		elsif(scalar(@enclosures) == 1) { $command .= "/e$enclosures[0]"; }
 		else { $command .= "/e".join(",", @enclosures); }
 	}
-
 	if(scalar(@physDevices) == 0) { $command .= "/sall"; }
 	elsif(scalar(@physDevices) == 1) { $command .= "/s$physDevices[0]"; }
 	else { $command .= "/s".join(",", @physDevices); }
 
 	$command .= " show $action";
 	my @output = `$command`;
-
 	my @physDevs;
 	if(checkCommandStatus(\@output)) {
 		if($action eq "all") {
 			my $currBlock;
-			my %lineValues_h;
+			my $line_ref;
 			foreach my $line(@output){
 				my @splittedLine;
 				if($line =~ /^Drive \/(c[0-9]*\/e[0-9]*\/s[0-9]*) \:$/){
 					$currBlock = $1;
+					$line_ref = {};
 					next;
 				}
 				if(defined($currBlock)){
 					if($line =~ /^\d+\:\d+\s+\d+\s+\w+\s+\d+.*/){
 						@splittedLine = map { s/^\s*//; s/\s*$//; $_; } split(/\s+/,$line);
 						# The current block is the c0/e252/s0 name
-						$lineValues_h{'pd'} = $currBlock;
+						$line_ref->{'pd'} = $currBlock;
 						my $j = 0;
 						for(my $i = 0; $i < @pdmap_a; $i++){
 							if($pdmap_a[$i] eq 'Size'){
@@ -457,7 +451,7 @@ sub getPhysDeviceStatus {
 									$size .= ''.$splittedLine[$j+1];
 									$j++;
 								}
-								$lineValues_h{$pdmap_a[$i]} = $size;
+								$line_ref->{$pdmap_a[$i]} = $size;
 								$j++;
 							}
 							elsif($pdmap_a[$i] eq 'Model'){
@@ -467,25 +461,24 @@ sub getPhysDeviceStatus {
 									$model .= ' '.$splittedLine[$j+1];
 									$j++;
 								}
-								$lineValues_h{$pdmap_a[$i]} = $model;
+								$line_ref->{$pdmap_a[$i]} = $model;
 								$j++;
 							}
 							else{
-								$lineValues_h{$pdmap_a[$i]} = $splittedLine[$j];
+								$line_ref->{$pdmap_a[$i]} = $splittedLine[$j];
 								$j++;
 							}
 						}
 					}
-					if($line =~ /^(Shield Counter|Media Error Count|Other Error Count|
-						BBM Error Count|Drive Temperature|Predictive Failure Count|
-						S.M.A.R.T alert flagged by drive)\s\=\s(.*)$/){
-						$lineValues_h{$1} = $2;
+					if($line =~ /^(Shield Counter|Media Error Count|Other Error Count|BBM Error Count|
+					Drive Temperature|Predictive Failure Count|S\.M\.A\.R\.T alert flagged by drive)\s\=\s(.*)$/){
+						$line_ref->{$1} = $2;
 					}
 					# If the last value is parsed, set up for the next device
-					if(exists($lineValues_h{'S.M.A.R.T alert flagged by drive'})){
-						push @physDevs, \%lineValues_h;
-						unset $currBlock;
-						%lineValues_h = {};
+					if(exists($line_ref->{'S.M.A.R.T alert flagged by drive'})){
+						push @physDevs, $line_ref;
+						undef $currBlock;
+						undef $line_ref;
 					}
 				}
 			}
@@ -886,7 +879,7 @@ MAIN: {
 #	($newexitstatus, $statusMessage) = getPhysDeviceStatus($sudo, $storcli, $controller, \@enclosures, \@physDevices, \@physicalDeviceTemperature_w, \@physicalDeviceTemperature_c, "rebuild");
 #	$newstatusMessage .= $statusMessage;
 #	$exitstatus = getExitState($newexitstatus, $exitstatus);
-	($newexitstatus, $statusMessage) = getPhysDeviceStatus($sudo, $storcli, $controller, \@enclosures, \@physDevices, \@physicalDeviceTemperature_w, \@physicalDeviceTemperature_c, "all");
+	($newexitstatus, $statusMessage) = getPhysDeviceStatus($storcli,\@enclosures, \@physDevices, \@physicalDeviceTemperature_w, \@physicalDeviceTemperature_c, "all");
 	$newstatusMessage .= $statusMessage;
 	$exitstatus = getExitState($newexitstatus, $exitstatus);
 	if($exitstatus == 0) { print "LSIRAID OK (Ctrl #$controller) | STATUS=$exitstatus\n"; }
