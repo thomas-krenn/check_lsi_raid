@@ -52,6 +52,10 @@
    o Logical Device Status and
    o BBU Status
 
+ Installation:
+ -------------
+ * libfile-which-perl
+
  Requirements:
  -------------
    o On the system to be monitored:

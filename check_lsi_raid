@@ -668,25 +668,15 @@ sub getCVStatus {
 # Checks if wheter BBU or CV is present
 # - One of the two show commands must return 'Success'
 sub checkBBUorCVIsPresent{
-	my $sudo = $_[0];
-	my $storcli = $_[1];
-	my $controller = $_[2];
+	my $storcli = shift;
 	my $status = 0;
-	my $statusMessage = '';
-
 	my ($bbu,$cv);
-	my $command = "$sudo $storcli /c$controller/bbu show";
-	my @output = `$command`;
-	if(checkCommandStatus(\@output)) {
-		$bbu = 1;
-	}
-	else{$bbu = 0};
-	$command = "$sudo $storcli /c$controller/cv show";
-	@output = `$command`;
-	if(checkCommandStatus(\@output)) {
-		$cv = 1;
-	}
-	else{$cv = 0};
+	my @output = `$storcli /bbu show`;
+	if(checkCommandStatus(\@output)){ $bbu = 1; }
+	else{ $bbu = 0 };
+	@output = `$storcli /cv show`;
+	if(checkCommandStatus(\@output)) { $cv = 1; }
+	else{ $cv = 0 };
 	return ($bbu, $cv);
 }
 
@@ -743,8 +733,17 @@ sub getThresholds {
 }
 
 MAIN: {
-	my ($storcli, $sudo, $noSudo, $version);
+	my ($storcli, $sudo, $noSudo, $version, $exitCode);
+	# Create default sensor arrays and push them to status level
+	my @statusLevel_a = ("OK");
+	my @warnings_a;
+	my @criticals_a;
+	push @statusLevel_a, \@warnings_a;
+	push @statusLevel_a, \@criticals_a;
+	# Per default use controller 0
 	my $controller = 0;
+	# Per default use a BBU
+	my $bbu = 1;
 	my @enclosures;
 	my @logDevices;
 	my @physDevices;
@@ -752,9 +751,7 @@ MAIN: {
 	my @temperature_c;
 	my @physicalDeviceTemperature_w;
 	my @physicalDeviceTemperature_c;
-	my $bbu = 1;
 	my $platform = $^O;
-	my $statusMessage = '';
 
 	if ( !(GetOptions(
 		'h|help' => sub {displayHelp();},
@@ -818,60 +815,38 @@ MAIN: {
 	# Print storcli version if available
 	if(defined($version)){ displayVersion($storcli) }
 	# Prepare storcli command
-	$storcli .= " /c$controller";	
+	$storcli .= " /c$controller";
+	# Check if the controller number can be used
 	if(!getControllerTime($storcli)){
 		print "Invalid controller number, device not found!\n";
 		exit(STATE_UNKNOWN);
 	}
+	# Prepare command line arrays
+	@enclosures = split(/,/,join(',', @enclosures));
+	@logDevices = split(/,/,join(',', @logDevices));
+	@physDevices = split(/,/,join(',', @physDevices));
+	# Check if the BBU param is correct
 	if(($bbu != 1) && ($bbu != 0)) {
 		print "Invalid BBU/CV parameter, must be 0 or 1!\n";
 		exit(STATE_UNKNOWN);
 	}
-
-	@enclosures = split(/,/,join(',', @enclosures));
-	@logDevices = split(/,/,join(',', @logDevices));
-	@physDevices = split(/,/,join(',', @physDevices));
-	# check given thresholds
-	if(@temperature_c && !@temperature_w){
-		print "Please also specify warning threshold!\n";
-		displayUsage();
-		exit(STATE_UNKNOWN);
+	my ($bbuPresent,$cvPresent) = (0,0);
+	if($bbu == 1){
+		($bbuPresent,$cvPresent) = checkBBUorCVIsPresent($storcli);
+		if($bbuPresent == 0 && $cvPresent == 0){
+			$statusLevel_a[0] = 'Critical';
+			push @criticals_a, 'no_BBU/CV'
+		}
 	}
-	@temperature_w = getThresholds(\@temperature_w, $C_TEMP_WARNING);
-	@temperature_c = getThresholds(\@temperature_c, $C_TEMP_CRITICAL);
-	if(@physicalDeviceTemperature_c && !@physicalDeviceTemperature_w){
-		print "Please also specify PD warning threshold!\n";
-		displayUsage();
-		exit(STATE_UNKNOWN);
+	if($bbuPresent == 1){ getBBUStatus($storcli, \@statusLevel_a); }
+	if($cvPresent == 1){ getCVStatus($storcli, \@statusLevel_a); }
+	$exitCode = STATE_OK;
+	if($statusLevel_a[0] eq "Critical"){
+		$exitCode = STATE_CRITICAL;
 	}
-	@physicalDeviceTemperature_w = getThresholds(\@physicalDeviceTemperature_w, $PD_TEMP_WARNING);
-	@physicalDeviceTemperature_c = getThresholds(\@physicalDeviceTemperature_c, $PD_TEMP_CRITICAL);
-
-	# Set exit status
-	my $exitstatus = 0;
-	my $newexitstatus = 0;
-	my $newstatusMessage = '';
-#	($newexitstatus, $statusMessage) = getControllerStatus($sudo, $storcli, $controller, \@temperature_w, \@temperature_c);
-#	$newstatusMessage .= $statusMessage;
-#	$exitstatus = getExitState($newexitstatus, $exitstatus);
-#	my ($bbuPresent,$cvPresent) = (0,0);
-#	if($bbu == 1){
-#		($bbuPresent,$cvPresent) = checkBBUorCVIsPresent($sudo, $storcli, $controller);
-#		if($bbuPresent == 0 && $cvPresent == 0){
-#			$exitstatus = getExitState(STATE_CRITICAL, $exitstatus);
-#			$newstatusMessage .= "No BBU or CV found, ";
-#		}
-#	}
-#	if($bbuPresent == 1){
-#		($newexitstatus, $statusMessage) = getBBUStatus($sudo, $storcli, $controller);
-#		$newstatusMessage .= $statusMessage;
-#		$exitstatus = getExitState($newexitstatus, $exitstatus);
-#	}
-#	if($cvPresent == 1){
-#		($newexitstatus, $statusMessage) = getCVStatus($sudo, $storcli, $controller);
-#		$newstatusMessage .= $statusMessage;
-#		$exitstatus = getExitState($newexitstatus, $exitstatus);
-#	}
+	if($statusLevel_a[0] eq "Warning"){
+		$exitCode = STATE_WARNING;
+	}
 #	($newexitstatus, $statusMessage) = getLogicalDeviceStatus($sudo, $storcli, $controller, \@logDevices, "init");
 #	$newstatusMessage .= $statusMessage;
 	$exitstatus = getExitState($newexitstatus, $exitstatus);
@@ -890,5 +865,5 @@ MAIN: {
 	if($exitstatus == 0) { print "LSIRAID OK (Ctrl #$controller) | STATUS=$exitstatus\n"; }
 	elsif($exitstatus == 1) { chop($newstatusMessage); chop($newstatusMessage); print "LSIRAID WARNING (Ctrl #$controller): [$newstatusMessage] | STATUS=$exitstatus\n"; }
 	elsif($exitstatus == 2) { chop($newstatusMessage); chop($newstatusMessage); print "LSIRAID CRITICAL (Ctrl #$controller): [$newstatusMessage] | STATUS=$exitstatus\n"; }
-	exit($exitstatus);
+	exit($exitCode);
 }
