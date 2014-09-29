@@ -367,9 +367,8 @@ sub getControllerStatus {
 	}
 }
 
-# Returns information about:
-#		- Logical device status
-sub getLogicalDeviceStatus {
+# Returns a list reference of found logical devices
+sub getLogicalDevices{
 	my $storcli = shift;
 	my @logDevices = @{(shift)};
 	my $action = shift;
@@ -380,7 +379,7 @@ sub getLogicalDeviceStatus {
 	$command .= " show $action";
 	
 	my @output = `$command`;
-	my @logDevs;
+	my @foundDevs;
 	if(checkCommandStatus(\@output)) {
 		if($action eq "all") {
 			my $currBlock;
@@ -399,7 +398,7 @@ sub getLogicalDeviceStatus {
 						for(my $i = 0; $i < @ldmap_a; $i++){
 								$lineValues_h{$ldmap_a[$i]} = $splittedLine[$i];
 							}
-						push @logDevs, \%lineValues_h;
+						push @foundDevs, \%lineValues_h;
 					}
 				}
 			}
@@ -414,7 +413,7 @@ sub getLogicalDeviceStatus {
 						my @vals = split('\s+',$line);
 						$lineValues_h{'ld'} = $vdNum;
 						$lineValues_h{'init'} = $vals[2];
-						push @logDevs, \%lineValues_h;
+						push @foundDevs, \%lineValues_h;
 					}
 				}
 			}
@@ -424,8 +423,7 @@ sub getLogicalDeviceStatus {
 		print "Invalid StorCLI command! ($command)\n";
 		exit(STATE_UNKNOWN);
 	}
-	use Data::Dumper;
-	print Dumper(@logDevs);
+	return \@foundDevs;
 }
 
 # Returns information about:
@@ -448,7 +446,7 @@ sub getPhysDeviceStatus {
 
 	$command .= " show $action";
 	my @output = `$command`;
-	my @physDevs;
+	my @foundDevs;
 	if(checkCommandStatus(\@output)) {
 		if($action eq "all") {
 			my $currBlock;
@@ -498,16 +496,32 @@ sub getPhysDeviceStatus {
 					}
 					# If the last value is parsed, set up for the next device
 					if(exists($line_ref->{'S.M.A.R.T alert flagged by drive'})){
-						push @physDevs, $line_ref;
+						push @foundDevs, $line_ref;
 						undef $currBlock;
 						undef $line_ref;
 					}
 				}
 			}
 		}
+		elsif($action eq 'rebuild' || $action eq 'initialization') {
+				foreach my $line(@output){
+				$line =~ s/^\s+|\s+$//g;#trim line
+				if($line =~ /^\/c$CONTROLLER\/.*/){
+					if($line !~ /Not in progress/i){
+						my %lineValues_h;
+						my @vals = split('\s+',$line);
+						my $key;
+						if($action eq 'rebuild'){ $key = 'rebuild'; }
+						if($action eq 'initialization'){ $key = 'init'; }
+						$lineValues_h{'pd'} = $vals[0];
+						$lineValues_h{$key} = $vals[2];
+						push @foundDevs, \%lineValues_h;
+					}
+				}
+			}
+		}
 	}
-	use Data::Dumper;
-	print Dumper(@physDevs);
+	return \@foundDevs;
 }
 
 # Returns information about:
@@ -855,8 +869,11 @@ MAIN: {
 	if($bbuPresent == 1){ getBBUStatus($storcli, \@statusLevel_a, \%verboseValues_h); }
 	if($cvPresent == 1){ getCVStatus($storcli, \@statusLevel_a, \%verboseValues_h); }
 	
-	getLogicalDeviceStatus($storcli, \@logDevices, "all");
-	getLogicalDeviceStatus($storcli, \@logDevices, "init");
+	my $LDDevicesToCheck = getLogicalDevices($storcli, \@logDevices, 'all');
+	my $LDInitToCheck = getLogicalDevices($storcli, \@logDevices, 'init');
+	my $PDDevicesToCheck = getLogicalDevices($storcli, \@logDevices, 'all');
+	my $PDInitToCheck = getLogicalDevices($storcli, \@logDevices, 'initialization');
+	my $PDRebuildToCheck = getLogicalDevices($storcli, \@logDevices, 'rebuild');
 	
 	$exitCode = STATE_OK;
 	if($statusLevel_a[0] eq "Critical"){
