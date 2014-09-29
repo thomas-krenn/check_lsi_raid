@@ -39,6 +39,7 @@ our $PD_TEMP_WARNING = 40;
 our $PD_TEMP_CRITICAL = 45;
 our ($ignerr_m, $ignerr_o, $ignerr_p, $ignerr_s) = (0, 0, 0, 0);
 our $NOENCLOSURES = 0;
+our $CONTROLLER = 0;
 
 use constant {
 	STATE_OK => 0,
@@ -369,21 +370,16 @@ sub getControllerStatus {
 # Returns information about:
 #		- Logical device status
 sub getLogicalDeviceStatus {
-	my $storcli = $_[0];
-	my @logDevices = @{($_[1])};
-	my $action = $_[2];
-
+	my $storcli = shift;
+	my @logDevices = @{(shift)};
+	my $action = shift;
 	my $command = $storcli;
-	my $status = 0;
-	my $statusMessage = ''; # Return String
-
 	if(scalar(@logDevices) == 0) { $command .= "/vall"; }
 	elsif(scalar(@logDevices) == 1) { $command .= "/v$logDevices[0]"; }
 	else { $command .= "/v".join(",", @logDevices); }
-
 	$command .= " show $action";
+	
 	my @output = `$command`;
-
 	my @logDevs;
 	if(checkCommandStatus(\@output)) {
 		if($action eq "all") {
@@ -408,6 +404,24 @@ sub getLogicalDeviceStatus {
 				}
 			}
 		}
+		elsif($action eq "init") {
+			foreach my $line(@output){
+				$line =~ s/^\s+|\s+$//g;#trim line
+				if($line =~ /^([0-9]+)\s+INIT.*$/){
+					my $vdNum = $CONTROLLER.'/'.$1;
+					if($line !~ /Not in progress/i){
+						my %lineValues_h;
+						my @vals = split($line);
+						$lineValues_h{$vdNum} = $vals[2];
+						push @logDevs, \%lineValues_h;
+					}
+				}
+			}
+		}
+	}
+	else {
+		print "Invalid StorCLI command! ($command)\n";
+		exit(STATE_UNKNOWN);
 	}
 	use Data::Dumper;
 	print Dumper(@logDevs);
@@ -503,6 +517,8 @@ sub getBBUStatus {
 	my @statusLevel_a = @{(shift)};
 	my %verboseValues_h = %{(shift)};
 	my $command = "$storcli /bbu show status";
+	my $status = 0;
+	my $statusMessage = '';
 
 	my @output = `$command`;
 	if(checkCommandStatus(\@output)) {
@@ -656,7 +672,8 @@ sub getCVStatus {
 				}
 			}
 		}
-	} else {
+	}
+	else {
 		print "Invalid StorCLI command! ($command)\n";
 		exit(STATE_UNKNOWN);
 	}
@@ -738,8 +755,6 @@ MAIN: {
 	push @statusLevel_a, \@warnings_a;
 	push @statusLevel_a, \@criticals_a;
 	my %verboseValues_h;
-	# Per default use controller 0
-	my $controller = 0;
 	# Per default use a BBU
 	my $bbu = 1;
 	my @enclosures;
@@ -757,7 +772,7 @@ MAIN: {
 		'vv' => sub {$VERBOSITY = 2},
 		'vvv' => sub {$VERBOSITY = 3},
 		'V|version' => \$version,
-		'C|controller=i' => \$controller,
+		'C|controller=i' => \$CONTROLLER,
 		'EID|enclosure=s' => \@enclosures,
 		'LD|logicaldevice=s' => \@logDevices,
 		'PD|physicaldevice=s' => \@physDevices,
@@ -813,7 +828,7 @@ MAIN: {
 	# Print storcli version if available
 	if(defined($version)){ displayVersion($storcli) }
 	# Prepare storcli command
-	$storcli .= " /c$controller";
+	$storcli .= " /c$CONTROLLER";
 	# Check if the controller number can be used
 	if(!getControllerTime($storcli)){
 		print "Invalid controller number, device not found!\n";
@@ -838,6 +853,10 @@ MAIN: {
 	}
 	if($bbuPresent == 1){ getBBUStatus($storcli, \@statusLevel_a, \%verboseValues_h); }
 	if($cvPresent == 1){ getCVStatus($storcli, \@statusLevel_a, \%verboseValues_h); }
+	
+	getLogicalDeviceStatus($storcli, \@logDevices, "all");
+	getLogicalDeviceStatus($storcli, \@logDevices, "init");
+	
 	$exitCode = STATE_OK;
 	if($statusLevel_a[0] eq "Critical"){
 		$exitCode = STATE_CRITICAL;
@@ -845,23 +864,23 @@ MAIN: {
 	if($statusLevel_a[0] eq "Warning"){
 		$exitCode = STATE_WARNING;
 	}
-#	($newexitstatus, $statusMessage) = getLogicalDeviceStatus($sudo, $storcli, $controller, \@logDevices, "init");
-#	$newstatusMessage .= $statusMessage;
-	$exitstatus = getExitState($newexitstatus, $exitstatus);
-	($newexitstatus, $statusMessage) = getLogicalDeviceStatus($storcli, \@logDevices, "all");
-	$newstatusMessage .= $statusMessage;
+##	($newexitstatus, $statusMessage) = getLogicalDeviceStatus($sudo, $storcli, $controller, \@logDevices, "init");
+##	$newstatusMessage .= $statusMessage;
 #	$exitstatus = getExitState($newexitstatus, $exitstatus);
-#	($newexitstatus, $statusMessage) = getPhysDeviceStatus($sudo, $storcli, $controller, \@enclosures, \@physDevices, \@physicalDeviceTemperature_w, \@physicalDeviceTemperature_c, "initialization");
+#	($newexitstatus, $statusMessage) = getLogicalDeviceStatus($storcli, \@logDevices, "all");
+#	$newstatusMessage .= $statusMessage;
+##	$exitstatus = getExitState($newexitstatus, $exitstatus);
+##	($newexitstatus, $statusMessage) = getPhysDeviceStatus($sudo, $storcli, $controller, \@enclosures, \@physDevices, \@physicalDeviceTemperature_w, \@physicalDeviceTemperature_c, "initialization");
+##	$newstatusMessage .= $statusMessage;
+##	$exitstatus = getExitState($newexitstatus, $exitstatus);
+##	($newexitstatus, $statusMessage) = getPhysDeviceStatus($sudo, $storcli, $controller, \@enclosures, \@physDevices, \@physicalDeviceTemperature_w, \@physicalDeviceTemperature_c, "rebuild");
+##	$newstatusMessage .= $statusMessage;
+##	$exitstatus = getExitState($newexitstatus, $exitstatus);
+#	($newexitstatus, $statusMessage) = getPhysDeviceStatus($storcli,\@enclosures, \@physDevices, \@physicalDeviceTemperature_w, \@physicalDeviceTemperature_c, "all");
 #	$newstatusMessage .= $statusMessage;
 #	$exitstatus = getExitState($newexitstatus, $exitstatus);
-#	($newexitstatus, $statusMessage) = getPhysDeviceStatus($sudo, $storcli, $controller, \@enclosures, \@physDevices, \@physicalDeviceTemperature_w, \@physicalDeviceTemperature_c, "rebuild");
-#	$newstatusMessage .= $statusMessage;
-#	$exitstatus = getExitState($newexitstatus, $exitstatus);
-	($newexitstatus, $statusMessage) = getPhysDeviceStatus($storcli,\@enclosures, \@physDevices, \@physicalDeviceTemperature_w, \@physicalDeviceTemperature_c, "all");
-	$newstatusMessage .= $statusMessage;
-	$exitstatus = getExitState($newexitstatus, $exitstatus);
-	if($exitstatus == 0) { print "LSIRAID OK (Ctrl #$controller) | STATUS=$exitstatus\n"; }
-	elsif($exitstatus == 1) { chop($newstatusMessage); chop($newstatusMessage); print "LSIRAID WARNING (Ctrl #$controller): [$newstatusMessage] | STATUS=$exitstatus\n"; }
-	elsif($exitstatus == 2) { chop($newstatusMessage); chop($newstatusMessage); print "LSIRAID CRITICAL (Ctrl #$controller): [$newstatusMessage] | STATUS=$exitstatus\n"; }
-	exit($exitCode);
+#	if($exitstatus == 0) { print "LSIRAID OK (Ctrl #$controller) | STATUS=$exitstatus\n"; }
+#	elsif($exitstatus == 1) { chop($newstatusMessage); chop($newstatusMessage); print "LSIRAID WARNING (Ctrl #$controller): [$newstatusMessage] | STATUS=$exitstatus\n"; }
+#	elsif($exitstatus == 2) { chop($newstatusMessage); chop($newstatusMessage); print "LSIRAID CRITICAL (Ctrl #$controller): [$newstatusMessage] | STATUS=$exitstatus\n"; }
+#	exit($exitCode);
 }
