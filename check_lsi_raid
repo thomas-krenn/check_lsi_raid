@@ -624,12 +624,10 @@ sub getBBUStatus {
 # - Cache Vault module status
 # - If CacheVault must be replaced
 sub getCVStatus {
-	my $sudo = $_[0];
-	my $storcli = $_[1];
-	my $controller = $_[2];
-	my $command = "$sudo $storcli /c$controller/cv show status";
-	my $status = 0;
-	my $statusMessage = '';
+	my $storcli = shift;
+	my @statusLevel_a = @{(shift)};
+	my %verboseValues_h = %{(shift)};
+	my $command = "$storcli /cv show status";
 
 	my @output = `$command`;
 	if(checkCommandStatus(\@output)) {
@@ -644,21 +642,24 @@ sub getCVStatus {
 				if($currBlock eq 'Cachevault_Info' && $line =~ /^State/){
 					my @vals = split('\s{2,}',$line);
 					if($vals[1] ne "Optimal") {
-						$status = getExitState($status, STATE_WARNING);
-						if($VERBOSITY == 0){$statusMessage .= "CacheVault state not optimal, ";}
-						if($VERBOSITY >= 1){$statusMessage .= "Cachevault Info state $1, "; }
+						if($statusLevel_a[0] ne 'Critical'){
+							$statusLevel_a[0] = 'Warning';
+						}
+						push $statusLevel_a[1], 'CacheVault_State';
+						$verboseValues_h{'CacheVault_State'} = $vals[1]
 					}
 				}
 				elsif($currBlock eq 'Firmware_Status' && $line =~ /^Replacement required/){
 					$line =~ /([a-zA-Z0-9]*)$/;
 					if($1 ne "No") {
-						$status = getExitState($status, STATE_WARNING);
-						$statusMessage .= "CacheVault replacement required, ";
+						if($statusLevel_a[0] ne 'Critical'){
+							$statusLevel_a[0] = 'Warning';
+						}
+						push $statusLevel_a[1],'CacheVault_Replacement';
 					}
 				}
 			}
 		}
-		return ($status, $statusMessage);
 	} else {
 		print "Invalid StorCLI command! ($command)\n";
 		exit(STATE_UNKNOWN);
@@ -835,7 +836,7 @@ MAIN: {
 		($bbuPresent,$cvPresent) = checkBBUorCVIsPresent($storcli);
 		if($bbuPresent == 0 && $cvPresent == 0){
 			$statusLevel_a[0] = 'Critical';
-			push @criticals_a, 'no_BBU/CV'
+			push @criticals_a, 'BBU/CV_Present'
 		}
 	}
 	if($bbuPresent == 1){ getBBUStatus($storcli, \@statusLevel_a); }
