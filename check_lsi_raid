@@ -145,6 +145,13 @@ sub checkCommandStatus{
 	}
 }
 
+sub getControllerTime{
+	my $storcli = shift;
+	my $ctr = shift;
+	my @output = `$storcli show time`;
+	return (checkCommandStatus(\@output));
+}
+
 # Returns information about:
 #		- Controller status and controller temperature
 sub getControllerStatus {
@@ -812,15 +819,10 @@ MAIN: {
 	if(defined($version)){ displayVersion($storcli) }
 	# Prepare storcli command
 	$storcli .= " /c$controller";	
-	
-	
-	# Input validation
-	#FIXME Replace with storcli show ctrlcount
-#	my @controllerVersion = `$storcli /c$controller show all`;
-#	if($controllerVersion[2] eq "Description = Controller $controller not found\n") {
-#		print "Invalid controller number, device not found!\n";
-#		exit(STATE_UNKNOWN);
-#	}
+	if(!getControllerTime($storcli)){
+		print "Invalid controller number, device not found!\n";
+		exit(STATE_UNKNOWN);
+	}
 	if(($bbu != 1) && ($bbu != 0)) {
 		print "Invalid BBU/CV parameter, must be 0 or 1!\n";
 		exit(STATE_UNKNOWN);
