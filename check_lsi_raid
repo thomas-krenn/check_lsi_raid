@@ -499,16 +499,12 @@ sub getPhysDeviceStatus {
 #		- Battery Backup Unit status
 #		- Temperature, Battery status, voltage
 sub getBBUStatus {
-	my $sudo = $_[0];
-	my $storcli = $_[1];
-	my $controller = $_[2];
-
-	my $command = "$sudo $storcli /c$controller/bbu show status";
-	my $status = 0;
-	my $statusMessage = '';
+	my $storcli = shift;
+	my @statusLevel_a = @{(shift)};
+	my %verboseValues_h = %{(shift)};
+	my $command = "$storcli /bbu show status";
 
 	my @output = `$command`;
-
 	if(checkCommandStatus(\@output)) {
 		my $blockid = 0;
 		foreach my $line (@output) {
@@ -741,6 +737,7 @@ MAIN: {
 	my @criticals_a;
 	push @statusLevel_a, \@warnings_a;
 	push @statusLevel_a, \@criticals_a;
+	my %verboseValues_h;
 	# Per default use controller 0
 	my $controller = 0;
 	# Per default use a BBU
@@ -839,8 +836,8 @@ MAIN: {
 			push @criticals_a, 'BBU/CV_Present'
 		}
 	}
-	if($bbuPresent == 1){ getBBUStatus($storcli, \@statusLevel_a); }
-	if($cvPresent == 1){ getCVStatus($storcli, \@statusLevel_a); }
+	if($bbuPresent == 1){ getBBUStatus($storcli, \@statusLevel_a, \%verboseValues_h); }
+	if($cvPresent == 1){ getCVStatus($storcli, \@statusLevel_a, \%verboseValues_h); }
 	$exitCode = STATE_OK;
 	if($statusLevel_a[0] eq "Critical"){
 		$exitCode = STATE_CRITICAL;
