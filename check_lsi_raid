@@ -428,11 +428,11 @@ sub getLogicalDevices{
 
 # Returns information about:
 #		- Physical device status
-sub getPhysDeviceStatus {
-	my $storcli = $_[0];
-	my @enclosures = @{($_[1])};
-	my @physDevices = @{($_[2])};
-	my $action = $_[5];
+sub getPhysicalDevices{
+	my $storcli = shift;
+	my @enclosures = @{(shift)};
+	my @physDevices = @{(shift)};
+	my $action = shift;
 
 	my $command = $storcli;
 	if(!$NOENCLOSURES){
@@ -513,8 +513,8 @@ sub getPhysDeviceStatus {
 						my $key;
 						if($action eq 'rebuild'){ $key = 'rebuild'; }
 						if($action eq 'initialization'){ $key = 'init'; }
-						$lineValues_h{'pd'} = $vals[0];
-						$lineValues_h{$key} = $vals[2];
+						$lineValues_h{'pd'} = substr($vals[0], 1);
+						$lineValues_h{$key} = $vals[1];
 						push @foundDevs, \%lineValues_h;
 					}
 				}
@@ -871,9 +871,9 @@ MAIN: {
 	
 	my $LDDevicesToCheck = getLogicalDevices($storcli, \@logDevices, 'all');
 	my $LDInitToCheck = getLogicalDevices($storcli, \@logDevices, 'init');
-	my $PDDevicesToCheck = getLogicalDevices($storcli, \@logDevices, 'all');
-	my $PDInitToCheck = getLogicalDevices($storcli, \@logDevices, 'initialization');
-	my $PDRebuildToCheck = getLogicalDevices($storcli, \@logDevices, 'rebuild');
+	my $PDDevicesToCheck = getPhysicalDevices($storcli, \@enclosures, \@physDevices, 'all');
+	my $PDInitToCheck = getPhysicalDevices($storcli, \@enclosures, \@physDevices, 'initialization');
+	my $PDRebuildToCheck = getPhysicalDevices($storcli, \@enclosures, \@physDevices, 'rebuild');
 	
 	$exitCode = STATE_OK;
 	if($statusLevel_a[0] eq "Critical"){
