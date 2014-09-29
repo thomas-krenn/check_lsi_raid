@@ -408,11 +408,12 @@ sub getLogicalDeviceStatus {
 			foreach my $line(@output){
 				$line =~ s/^\s+|\s+$//g;#trim line
 				if($line =~ /^([0-9]+)\s+INIT.*$/){
-					my $vdNum = $CONTROLLER.'/'.$1;
+					my $vdNum = 'c'.$CONTROLLER.'/v'.$1;
 					if($line !~ /Not in progress/i){
 						my %lineValues_h;
-						my @vals = split($line);
-						$lineValues_h{$vdNum} = $vals[2];
+						my @vals = split('\s+',$line);
+						$lineValues_h{'ld'} = $vdNum;
+						$lineValues_h{'init'} = $vals[2];
 						push @logDevs, \%lineValues_h;
 					}
 				}
