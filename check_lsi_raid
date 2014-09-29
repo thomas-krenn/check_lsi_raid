@@ -117,17 +117,17 @@ suggest improvements. The mailing list archive is available at:
 # Prints the Name, Version of the Plugin
 # Also Prints the version of StorCLI
 sub displayVersion {
-	my $sudo = $_[0];
-	my $storcli = $_[1];
-	my @storcliVersion = `$sudo $storcli -v`;
-	print $NAME . "\nVersion: ". $VERSION . "\n\n";
-	foreach my $line (@storcliVersion){
-		if($line =~ /^\s*Storage/) {
-			$line =~ s/^\s+|\s+$//g;
-			print $line;
+	my $storcli = $_[0];
+	if(defined($storcli)){
+		my @storcliVersion = `$storcli -v`;
+		foreach my $line (@storcliVersion){
+			if($line =~ /^\s*Storage/) {
+				$line =~ s/^\s+|\s+$//g;
+				print $line;
+			}
 		}
+		print "\n";
 	}
-	print "\n";
 	exit(STATE_OK);
 }
 
@@ -736,7 +736,7 @@ sub getThresholds {
 }
 
 MAIN: {
-	my ($storcli, $sudo, $noSudo);
+	my ($storcli, $sudo, $noSudo, $version);
 	my $controller = 0;
 	my @enclosures;
 	my @logDevices;
@@ -754,7 +754,7 @@ MAIN: {
 		'v|verbose' => sub {$VERBOSITY = 1 },
 		'vv' => sub {$VERBOSITY = 2},
 		'vvv' => sub {$VERBOSITY = 3},
-		'V|version' => sub {displayVersion($sudo, $storcli);},
+		'V|version' => \$version,
 		'C|controller=i' => \$controller,
 		'EID|enclosure=s' => \@enclosures,
 		'LD|logicaldevice=s' => \@logDevices,
@@ -776,7 +776,8 @@ MAIN: {
 		displayUsage();
 		exit(STATE_UNKNOWN);
 	}
-	# Check smartclt tool
+	if(defined($version)){ print $NAME . "\nVersion: ". $VERSION . "\n\n"; }
+	# Check storcli tool
 	if(!defined($storcli)){
 		eval('use File::Which');
 		if ($platform eq 'linux'){
@@ -792,7 +793,7 @@ MAIN: {
 			}
 		}
 	}
-	if(! -x $storcli){
+	if(!defined($storcli)){
 		print "Error: cannot find storcli executable.\n";
 		exit(STATE_UNKNOWN);
 	}
@@ -800,13 +801,15 @@ MAIN: {
 		if(!defined($noSudo)){
 			my $sudo;
 			chomp($sudo = `which sudo`);
-			if(! -x $sudo){
+			if(!defined($sudo)){
 				print "Error: cannot find sudo executable.\n";
 				exit(STATE_UNKNOWN);
 			}
 			$storcli = $sudo.' '.$storcli;
 		}
 	}
+	# Print storcli version if available
+	if(defined($version)){ displayVersion($storcli) }
 	# Prepare storcli command
 	$storcli .= " /c$controller";	
 	
