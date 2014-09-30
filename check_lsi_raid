@@ -776,6 +776,48 @@ sub getThresholds {
 	}
 }
 
+#	Generate an alert if x...
+#	-Tw 10			< 0 or > 10, (outside the range of {0 .. 10})
+#	-Tw 10:			< 10, (outside {10 .. inf})
+#	-Tw ~:10		> 10, (outside the range of {-inf .. 10})
+#	-Tw 10:20		< 10 or > 20, (outside the range of {10 .. 20})
+#	-Tw @10:20		>= 10 and <= 20, (inside the range of {10 .. 20})
+sub checkThreshs{
+	my $value = shift;
+	my $pattern = shift;
+
+	if($pattern =~ /(^[0-9]+$)/){
+		if($value < 0 || $value > $1){
+			return 0;
+		}
+	}
+	elsif($pattern =~ /(^[0-9]+)\:$/){
+		if($value < $1){
+			return 0;
+		}
+	}
+	elsif($pattern =~ /^\~\:([0-9]+)$/){
+		if($value > $1){
+			return 0;
+		}
+	}
+	elsif($pattern =~ /^([0-9]+)\:([0-9]+)$/){
+		if($value < $1 || $value > $2){
+			return 0;
+		}
+	}
+	elsif($pattern =~ /^\@([0-9]+)\:([0-9]+)$/){
+		if($value >= $1 and $value <= $2){
+			return 0;
+		}
+	}
+	else{
+		print "Invalid temperature parameter: \"$pattern\"!";
+		exit(STATE_UNKNOWN);
+	}
+	return 1;
+}
+
 MAIN: {
 	my ($storcli, $sudo, $noSudo, $version, $exitCode);
 	# Create default sensor arrays and push them to status level
