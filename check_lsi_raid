@@ -156,18 +156,10 @@ sub getControllerTime{
 # Returns information about:
 #		- Controller status and controller temperature
 sub getControllerStatus {
-	my $sudo = $_[0];
-	my $storcli = $_[1];
-	my $controller = $_[2];
-	my @temperature_w = @{($_[3])};
-	my @temperature_c = @{($_[4])};
+	my $storcli = shift;
+	$storcli =~ s/\/c/adpallinfo a/;
 
-	my $command = "$sudo $storcli /c$controller show all";
-	my $status = 0; # Return Status
-	my $statusMessage = ''; # Return String
-
-	my @output = `$command`;
-
+	my @output = `$storcli`;
 	if(checkCommandStatus(\@output)) {
 		foreach my $line (@output) {
 			my $first;
@@ -372,6 +364,7 @@ sub getLogicalDevices{
 	my $storcli = shift;
 	my @logDevices = @{(shift)};
 	my $action = shift;
+	
 	my $command = $storcli;
 	if(scalar(@logDevices) == 0) { $command .= "/vall"; }
 	elsif(scalar(@logDevices) == 1) { $command .= "/v$logDevices[0]"; }
@@ -426,8 +419,7 @@ sub getLogicalDevices{
 	return \@foundDevs;
 }
 
-# Returns information about:
-#		- Physical device status
+# Returns a list reference of found physical devices
 sub getPhysicalDevices{
 	my $storcli = shift;
 	my @enclosures = @{(shift)};
