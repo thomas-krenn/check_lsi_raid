@@ -530,9 +530,9 @@ sub getPhysicalDevices{
 sub getBBUStatus {
 	my $storcli = shift;
 	my @statusLevel_a = @{(shift)};
-	my %verboseValues_h = %{(shift)};
-	my $command = "$storcli /cv show status";
+	my $command = "$storcli /bbu show status";
 
+	my $status;
 	my @output = `$command`;
 	if(checkCommandStatus(\@output)) {
 		my $currBlock;
@@ -542,7 +542,6 @@ sub getBBUStatus {
 				next;
 			}
 			if(defined($currBlock)){
-				my $status;
 				$line =~ s/^\s+|\s+$//g;#trim line
 				if($currBlock eq 'BBU_Info'){
 					if ($line =~ /^Battery State/){
@@ -550,16 +549,16 @@ sub getBBUStatus {
 							if($1 ne 'Optimal'){
 								$status = 'Warning';
 								push $statusLevel_a[1], 'Battery_state';
-								$verboseValues_h{'Battery_State'} = $1
+								$statusLevel_a[3]->{'Battery_State'} = $1
 							}
 						}
 					elsif ($line =~ /^Temperature/){
-						$line =~ /([0-9]+ C)$/;
-						#FIXME Check temperatur here
+						$line =~ /([0-9]+) C$/;
+						#FIXME Check temperature here
 						if($1 > 20){
 							$status = 'Warning';
 							push $statusLevel_a[1], 'Battery_temperature';
-							$verboseValues_h{'Battery_Temperature'} = $1;
+							$statusLevel_a[3]->{'Battery_temperature'} = $1;
 						}
 					}
 				}
@@ -569,7 +568,7 @@ sub getBBUStatus {
 						if($1 ne "OK") {
 							$status = 'Critical';
 							push $statusLevel_a[2],'BBU_firmware_temperature';
-							$verboseValues_h{'BBU_Firmware_Temperature'} = $1;
+							$statusLevel_a[3]->{'BBU_firmware_temperature'} = $1;
 						}
 					}
 					elsif($line =~ /^Voltage/){
@@ -577,15 +576,15 @@ sub getBBUStatus {
 						if($1 ne "OK") {
 							$status = 'Warning';
 							push $statusLevel_a[1],'BBU_voltage';
-							$verboseValues_h{'BBU_voltage'} = $1;
+							$statusLevel_a[3]->{'BBU_voltage'} = $1;
 						}
 					}
 					elsif($line =~ /^I2C Errors Detected/){
 						$line =~ /([a-zA-Z]*)$/;
 						if($1 ne "No") {
 							$status = 'Critical';
-							push $statusLevel_a[2],'BBU_firmware_I2C_errors';
-							$verboseValues_h{'BBU_Firmware_I2C_Errors'} = $1;
+							push $statusLevel_a[2],'BBU_Firmware_I2C_errors';
+							$statusLevel_a[3]->{'BBU_Firmware_I2C_Errors'} = $1;
 						}
 					}
 					elsif($line =~ /^Battery Pack Missing/){
@@ -593,7 +592,7 @@ sub getBBUStatus {
 						if($1 ne "No") {
 							$status = 'Critical';
 							push $statusLevel_a[2],'Battery_pack_missing';
-							$verboseValues_h{'Battery_pack_missing'} = $1;
+							$statusLevel_a[3]->{'Battery_pack_missing'} = $1;
 						}
 					}
 					elsif($line =~ /^Replacement required/){
@@ -601,7 +600,7 @@ sub getBBUStatus {
 						if($1 ne "No") {
 							$status = 'Critical';
 							push $statusLevel_a[2],'BBU_replacement_required';
-							$verboseValues_h{'BBU_replacement_required'} = $1;
+							$statusLevel_a[3]->{'BBU_replacement_required'} = $1;
 						}
 					}
 					elsif($line =~ /^Remaining Capacity Low/){
@@ -609,7 +608,7 @@ sub getBBUStatus {
 						if($1 ne "No") {
 							$status = 'Warning';
 							push $statusLevel_a[1],'BBU_remaining_capacity_low';
-							$verboseValues_h{'BBU_remaining_capacity_low'} = $1;
+							$statusLevel_a[3]->{'BBU_remaining_capacity_low'} = $1;
 						}
 					}
 					elsif($line =~ /^Pack is about to fail \& should be replaced/){
@@ -617,7 +616,7 @@ sub getBBUStatus {
 						if($1 ne "No") {
 							$status = 'Critical';
 							push $statusLevel_a[2],'BBU_should_be_replaced';
-							$verboseValues_h{'BBU_should_be_replaced'} = $1;
+							$statusLevel_a[3]->{'BBU_should_be_replaced'} = $1;
 						}
 					}
 				}
@@ -627,7 +626,7 @@ sub getBBUStatus {
 						if($1 ne "No") {
 							$status = 'Critical';
 							push $statusLevel_a[2],'BBU_GasGauge_discharged';
-							$verboseValues_h{'BBU_GasGauge_discharged'} = $1;
+							$statusLevel_a[3]->{'BBU_GasGauge_discharged'} = $1;
 						}
 					}
 					elsif($line =~ /^Over Temperature/){
@@ -635,7 +634,7 @@ sub getBBUStatus {
 						if($1 ne "No") {
 							$status = 'Warning';
 							push $statusLevel_a[1],'BBU_GasGauge_over_temperature';
-							$verboseValues_h{'BBU_GasGauge_over_temperature'} = $1;
+							$statusLevel_a[3]->{'BBU_GasGauge_over_temperature'} = $1;
 						}
 					}
 					elsif($line =~ /^Over Charged/){
@@ -643,29 +642,27 @@ sub getBBUStatus {
 						if($1 ne "No") {
 							$status = 'Critical';
 							push $statusLevel_a[2],'BBU_GasGauge_over_charged';
-							$verboseValues_h{'BBU_GasGauge_over_charged'} = $1;
+							$statusLevel_a[3]->{'BBU_GasGauge_over_charged'} = $1;
 						}
-					}
-				}
-				if(defined($status)){
-					if ($status eq 'Warning'){
-						if($statusLevel_a[0] ne 'Critical'){
-							$statusLevel_a[0] = 'Warning';
-						}
-					}
-					else{
-						$statusLevel_a[0] = 'Critical';
 					}
 				}
 			}
+			if(defined($status)){
+				if ($status eq 'Warning'){
+					if(${$statusLevel_a[0]} ne 'Critical'){
+						${$statusLevel_a[0]} = 'Warning';
+					}
+				}
+				else{
+					${$statusLevel_a[0]} = 'Warning';
+				}
+			}	
 		}
 	}
 	else {
 		print "Invalid StorCLI command! ($command)\n";
 		exit(STATE_UNKNOWN);
 	}
-	push @statusLevel_a, \%verboseValues_h;
-	return \@statusLevel_a
 }
 
 # Returns information about:
@@ -674,7 +671,6 @@ sub getBBUStatus {
 sub getCVStatus {
 	my $storcli = shift;
 	my @statusLevel_a = @{(shift)};
-	my %verboseValues_h = %{(shift)};
 	my $command = "$storcli /cv show status";
 
 	my @output = `$command`;
@@ -690,20 +686,18 @@ sub getCVStatus {
 				if($currBlock eq 'Cachevault_Info' && $line =~ /^State/){
 					my @vals = split('\s{2,}',$line);
 					if($vals[1] ne "Optimal") {
-						if($statusLevel_a[0] ne 'Critical'){
-							$statusLevel_a[0] = 'Warning';
+						if(${$statusLevel_a[0]} ne 'Critical'){
+							${$statusLevel_a[0]} = 'Warning';
 						}
-						push $statusLevel_a[1], 'CacheVault_State';
-						$verboseValues_h{'CacheVault_State'} = $vals[1]
+						push $statusLevel_a[1], 'CacheVault_state';
+						$statusLevel_a[3]->{'CacheVault_state'} = $vals[1]
 					}
 				}
 				elsif($currBlock eq 'Firmware_Status' && $line =~ /^Replacement required/){
 					$line =~ /([a-zA-Z0-9]*)$/;
 					if($1 ne "No") {
-						if($statusLevel_a[0] ne 'Critical'){
-							$statusLevel_a[0] = 'Warning';
-						}
-						push $statusLevel_a[1],'CacheVault_Replacement';
+						${$statusLevel_a[0]} = 'Warning';
+						push $statusLevel_a[2],'CacheVault_replacement_required';
 					}
 				}
 			}
@@ -785,12 +779,16 @@ sub getThresholds {
 MAIN: {
 	my ($storcli, $sudo, $noSudo, $version, $exitCode);
 	# Create default sensor arrays and push them to status level
-	my @statusLevel_a = ("OK");
-	my @warnings_a;
-	my @criticals_a;
-	push @statusLevel_a, \@warnings_a;
-	push @statusLevel_a, \@criticals_a;
-	my %verboseValues_h;
+	my @statusLevel_a ;
+	my $status_str = 'OK';
+	my $status_ref = \$status_str;
+	my $warnings_a = [];
+	my $criticals_a = [];
+	my $verboseValues_h = {};
+	push @statusLevel_a, $status_ref;
+	push @statusLevel_a, $warnings_a;
+	push @statusLevel_a, $criticals_a;
+	push @statusLevel_a, $verboseValues_h;
 	# Per default use a BBU
 	my $bbu = 1;
 	my @enclosures;
@@ -884,11 +882,14 @@ MAIN: {
 		($bbuPresent,$cvPresent) = checkBBUorCVIsPresent($storcli);
 		if($bbuPresent == 0 && $cvPresent == 0){
 			$statusLevel_a[0] = 'Critical';
-			push @criticals_a, 'BBU/CV_Present'
+			push $criticals_a, 'BBU/CV_Present'
 		}
 	}
-	if($bbuPresent == 1){getBBUStatus($storcli, \@statusLevel_a, \%verboseValues_h); }
-	if($cvPresent == 1){ getCVStatus($storcli, \@statusLevel_a, \%verboseValues_h); }
+	if($bbuPresent == 1){getBBUStatus($storcli, \@statusLevel_a); }
+	if($cvPresent == 1){ getCVStatus($storcli, \@statusLevel_a); }
+	
+	use Data::Dumper;
+	print Dumper(@statusLevel_a);
 	
 	my $LDDevicesToCheck = getLogicalDevices($storcli, \@logDevices, 'all');
 	my $LDInitToCheck = getLogicalDevices($storcli, \@logDevices, 'init');
