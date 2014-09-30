@@ -156,10 +156,18 @@ sub getControllerTime{
 # Returns information about:
 #		- Controller status and controller temperature
 sub getControllerStatus {
-	my $storcli = shift;
-	$storcli =~ s/\/c/adpallinfo a/;
+	my $sudo = $_[0];
+	my $storcli = $_[1];
+	my $controller = $_[2];
+	my @temperature_w = @{($_[3])};
+	my @temperature_c = @{($_[4])};
 
-	my @output = `$storcli`;
+	my $command = "$sudo $storcli /c$controller show all";
+	my $status = 0; # Return Status
+	my $statusMessage = ''; # Return String
+
+	my @output = `$command`;
+
 	if(checkCommandStatus(\@output)) {
 		foreach my $line (@output) {
 			my $first;
@@ -364,7 +372,6 @@ sub getLogicalDevices{
 	my $storcli = shift;
 	my @logDevices = @{(shift)};
 	my $action = shift;
-	
 	my $command = $storcli;
 	if(scalar(@logDevices) == 0) { $command .= "/vall"; }
 	elsif(scalar(@logDevices) == 1) { $command .= "/v$logDevices[0]"; }
@@ -419,7 +426,8 @@ sub getLogicalDevices{
 	return \@foundDevs;
 }
 
-# Returns a list reference of found physical devices
+# Returns information about:
+#		- Physical device status
 sub getPhysicalDevices{
 	my $storcli = shift;
 	my @enclosures = @{(shift)};
@@ -523,120 +531,141 @@ sub getBBUStatus {
 	my $storcli = shift;
 	my @statusLevel_a = @{(shift)};
 	my %verboseValues_h = %{(shift)};
-	my $command = "$storcli /bbu show status";
-	my $status = 0;
-	my $statusMessage = '';
+	my $command = "$storcli /cv show status";
 
 	my @output = `$command`;
 	if(checkCommandStatus(\@output)) {
-		my $blockid = 0;
+		my $currBlock;
 		foreach my $line (@output) {
-			my $first;
-			my $last;
-			if($line =~ /^([a-zA-Z0-9]*)/) {
-				$first = $1;
-				if($first eq 'BBU_Info' || $first eq 'BBU_Firmware_Status' || $first eq 'GasGaugeStatus') {
-					$blockid++;
+			if($line =~ /^(BBU_Info|BBU_Firmware_Status|GasGaugeStatus)/){
+				$currBlock = $1;
+				next;
+			}
+			if(defined($currBlock)){
+				my $status;
+				$line =~ s/^\s+|\s+$//g;#trim line
+				if($currBlock eq 'BBU_Info'){
+					if ($line =~ /^Battery State/){
+						$line =~ /([a-zA-Z]*)$/;
+							if($1 ne 'Optimal'){
+								$status = 'Warning';
+								push $statusLevel_a[1], 'Battery_state';
+								$verboseValues_h{'Battery_State'} = $1
+							}
+						}
+					elsif ($line =~ /^Temperature/){
+						$line =~ /([0-9]+ C)$/;
+						#FIXME Check temperatur here
+						if($1 > 20){
+							$status = 'Warning';
+							push $statusLevel_a[1], 'Battery_temperature';
+							$verboseValues_h{'Battery_Temperature'} = $1;
+						}
+					}
 				}
-				if($line =~ /([a-zA-Z0-9]*)$/) {
-					$last = $1;
-					# Check BBU_Info block
-					if ($blockid eq 1) {
-						if($first eq "Battery") {
-							if($line =~ /\s+([a-zA-Z0-9]*)/) {
-								if($1 eq "State") {
-									if($last ne "Optimal") {
-										$status = getExitState($status, STATE_WARNING);
-										$statusMessage .= "BBU state not optimal, ";
-									}
-								}
-							}
+				elsif($currBlock eq 'BBU_Firmware_Status'){
+					if($line =~ /^Temperature/){
+						$line =~ /([a-zA-Z]*)$/;
+						if($1 ne "OK") {
+							$status = 'Critical';
+							push $statusLevel_a[2],'BBU_firmware_temperature';
+							$verboseValues_h{'BBU_Firmware_Temperature'} = $1;
 						}
 					}
-					# Check BBU_Firmware_Status
-					if ($blockid eq 2) {
-						if($first eq "Temperature") {
-							if($last ne "OK") {
-								$status = getExitState($status, STATE_CRITICAL);
-								if ($VERBOSITY == 0) {$statusMessage .= "BBU temp. critical, "; }
-								if ($VERBOSITY >= 1) {$statusMessage .= "BBU Temperature critical, "; }
-							}
-						}
-						elsif($first eq "Battery") {
-							if($line =~ /\s+([a-zA-Z0-9]*)/) {
-								if($1 eq "State") {
-									if($last ne "Optimal") {
-										$status = getExitState($status, STATE_WARNING);
-										$statusMessage .= "BBU state not optimal, ";
-									}
-								}
-								elsif($1 eq "Pack") {
-									if($last ne "No") {
-										$status = getExitState($status, STATE_CRITICAL);
-										$statusMessage .= "BBU pack missing, ";
-									}
-								}
-								elsif($1 eq "Replacement") {
-									if($last ne "No") {
-										$status = getExitState($status, STATE_WARNING);
-										$statusMessage .= "BBU replacement required, ";
-									}
-								}
-							}
-						}
-						elsif($first eq "Voltage") {
-							if($last ne "OK") {
-								$status = getExitState($status, STATE_CRITICAL);
-								$statusMessage .= "BBU voltage not ok, ";
-							}
-						}
-						elsif($first eq "Learn") {
-							if($last ne "OK") {
-								$status = getExitState($status, STATE_WARNING);
-								$statusMessage .= "BBU learn cycle status not ok, ";
-							}
-						}
-						elsif($first eq "I2C") {
-							if($last ne "No") {
-								$status = getExitState($status, STATE_CRITICAL);
-								$statusMessage .= "BBU I2C errors, ";
-							}
-						}
-						elsif($first eq "Remaining") {
-							if($last ne "No") {
-								$status = getExitState($status, STATE_WARNING);
-								if ($VERBOSITY == 0) {$statusMessage .= "BBU capacity low, "; }
-								if ($VERBOSITY >= 1) {$statusMessage .= "BBU remaining capacity is low, "; }
-							}
+					elsif($line =~ /^Voltage/){
+						$line =~ /([a-zA-Z]*)$/;
+						if($1 ne "OK") {
+							$status = 'Warning';
+							push $statusLevel_a[1],'BBU_voltage';
+							$verboseValues_h{'BBU_voltage'} = $1;
 						}
 					}
-					# Check GasGaugeStatus
-					if ($blockid eq 3) {
-						if($first eq "Over") {
-							if($line =~ /\s+([a-zA-Z0-9]*)/) {
-								if($1 eq "Temperature") {
-									if($last ne "No") {
-										$status = getExitState($status, STATE_CRITICAL);
-										if ($VERBOSITY == 0) {$statusMessage .= "BBU temp. critical, "; }
-										if ($VERBOSITY >= 1) {$statusMessage .= "BBU Temperature critical, "; }
-									}
-								} elsif($1 eq "Charged") {
-									if($last ne "No") {
-										$status = getExitState($status, STATE_CRITICAL);
-										$statusMessage .= "BBU over charged, ";
-									}
-								}
-							}
+					elsif($line =~ /^I2C Errors Detected/){
+						$line =~ /([a-zA-Z]*)$/;
+						if($1 ne "No") {
+							$status = 'Critical';
+							push $statusLevel_a[2],'BBU_firmware_I2C_errors';
+							$verboseValues_h{'BBU_Firmware_I2C_Errors'} = $1;
 						}
+					}
+					elsif($line =~ /^Battery Pack Missing/){
+						$line =~ /([a-zA-Z]*)$/;
+						if($1 ne "No") {
+							$status = 'Critical';
+							push $statusLevel_a[2],'Battery_pack_missing';
+							$verboseValues_h{'Battery_pack_missing'} = $1;
+						}
+					}
+					elsif($line =~ /^Replacement required/){
+						$line =~ /([a-zA-Z]*)$/;
+						if($1 ne "No") {
+							$status = 'Critical';
+							push $statusLevel_a[2],'BBU_replacement_required';
+							$verboseValues_h{'BBU_replacement_required'} = $1;
+						}
+					}
+					elsif($line =~ /^Remaining Capacity Low/){
+						$line =~ /([a-zA-Z]*)$/;
+						if($1 ne "No") {
+							$status = 'Warning';
+							push $statusLevel_a[1],'BBU_remaining_capacity_low';
+							$verboseValues_h{'BBU_remaining_capacity_low'} = $1;
+						}
+					}
+					elsif($line =~ /^Pack is about to fail \& should be replaced/){
+						$line =~ /([a-zA-Z]*)$/;
+						if($1 ne "No") {
+							$status = 'Critical';
+							push $statusLevel_a[2],'BBU_should_be_replaced';
+							$verboseValues_h{'BBU_should_be_replaced'} = $1;
+						}
+					}
+				}
+				elsif($currBlock eq 'GasGaugeStatus'){
+					if($line =~ /^Fully Discharged/){
+						$line =~ /([a-zA-Z]*)$/;
+						if($1 ne "No") {
+							$status = 'Critical';
+							push $statusLevel_a[2],'BBU_GasGauge_discharged';
+							$verboseValues_h{'BBU_GasGauge_discharged'} = $1;
+						}
+					}
+					elsif($line =~ /^Over Temperature/){
+						$line =~ /([a-zA-Z]*)$/;
+						if($1 ne "No") {
+							$status = 'Warning';
+							push $statusLevel_a[1],'BBU_GasGauge_over_temperature';
+							$verboseValues_h{'BBU_GasGauge_over_temperature'} = $1;
+						}
+					}
+					elsif($line =~ /^Over Charged/){
+						$line =~ /([a-zA-Z]*)$/;
+						if($1 ne "No") {
+							$status = 'Critical';
+							push $statusLevel_a[2],'BBU_GasGauge_over_charged';
+							$verboseValues_h{'BBU_GasGauge_over_charged'} = $1;
+						}
+					}
+				}
+				if(defined($status)){
+					if ($status eq 'Warning'){
+						if($statusLevel_a[0] ne 'Critical'){
+							$statusLevel_a[0] = 'Warning';
+						}
+					}
+					else{
+						$statusLevel_a[0] = 'Critical';
 					}
 				}
 			}
 		}
-		return ($status, $statusMessage);
-	} else {
+	}
+	else {
 		print "Invalid StorCLI command! ($command)\n";
 		exit(STATE_UNKNOWN);
 	}
+	push @statusLevel_a, \%verboseValues_h;
+	return \@statusLevel_a
 }
 
 # Returns information about:
@@ -858,7 +887,7 @@ MAIN: {
 			push @criticals_a, 'BBU/CV_Present'
 		}
 	}
-	if($bbuPresent == 1){ getBBUStatus($storcli, \@statusLevel_a, \%verboseValues_h); }
+	if($bbuPresent == 1){getBBUStatus($storcli, \@statusLevel_a, \%verboseValues_h); }
 	if($cvPresent == 1){ getCVStatus($storcli, \@statusLevel_a, \%verboseValues_h); }
 	
 	my $LDDevicesToCheck = getLogicalDevices($storcli, \@logDevices, 'all');
