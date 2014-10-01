@@ -495,8 +495,7 @@ sub getPhysicalDevices{
 							}
 						}
 					}
-					if($line =~ /^(Shield Counter|Media Error Count|Other Error Count|BBM Error Count|
-					Drive Temperature|Predictive Failure Count|S\.M\.A\.R\.T alert flagged by drive)\s\=\s(.*)$/){
+					if($line =~ /^(Shield Counter|Media Error Count|Other Error Count|BBM Error Count|Drive Temperature|Predictive Failure Count|S\.M\.A\.R\.T alert flagged by drive)\s\=\s+(.*)$/){
 						$line_ref->{$1} = $2;
 					}
 					# If the last value is parsed, set up for the next device
@@ -534,73 +533,75 @@ sub getPDStatus{
 	my @foundPDs = @{(shift)};
 	my $status;
 	foreach my $PD (@foundPDs){
-		if(exists $PD->{'State'}){
+		if(exists($PD->{'State'})){
 			if($PD->{'State'} ne 'Onln'){
 				$status = 'Critical';
 				push $statusLevel_a[2], $PD->{'pd'}.'_State';
 				$statusLevel_a[3]->{$PD->{'pd'}.'_State'} = $PD->{'State'};
 			}
 		}
-		elsif(exists $PD->{'Shield Counter'}){
+		if(exists($PD->{'Shield Counter'})){
 			if($PD->{'Shield Counter'} > '0'){
 				$status = 'Warning';
 				push $statusLevel_a[1], $PD->{'pd'}.'_Shield_counter';
-				$statusLevel_a[3]->{$PD->{'pd'}.'_Shield_Counter'} = $PD->{'Shield_counter'};
+				$statusLevel_a[3]->{$PD->{'pd'}.'_Shield_Counter'} = $PD->{'Shield Counter'};
 			}
 		}
-		elsif(exists $PD->{'Media Error Count'}){
+		if(exists($PD->{'Media Error Count'})){
 			if($PD->{'Media Error Count'} > '0'){
 				$status = 'Warning';
 				push $statusLevel_a[1], $PD->{'pd'}.'_Media_error_count';
-				$statusLevel_a[3]->{$PD->{'pd'}.'_Media_error_count'} = $PD->{'Media_error_count'};
+				$statusLevel_a[3]->{$PD->{'pd'}.'_Media_error_count'} = $PD->{'Media Error Count'};
 			}
 		}
-		elsif(exists $PD->{'Other Error Count'}){
+		if(exists($PD->{'Other Error Count'})){
 			if($PD->{'Other Error Count'} > '0'){
 				$status = 'Warning';
 				push $statusLevel_a[1], $PD->{'pd'}.'_Other_error_count';
-				$statusLevel_a[3]->{$PD->{'pd'}.'_Other_error_count'} = $PD->{'Other_error_count'};
+				$statusLevel_a[3]->{$PD->{'pd'}.'_Other_error_count'} = $PD->{'Other Error Count'};
 			}
 		}
-		elsif(exists $PD->{'BBM Error Count'}){
+		if(exists($PD->{'BBM Error Count'})){
 			if($PD->{'BBM Error Count'} > '0'){
 				$status = 'Warning';
 				push $statusLevel_a[1], $PD->{'pd'}.'_BBM_error_count';
-				$statusLevel_a[3]->{$PD->{'pd'}.'_BBM_error_count'} = $PD->{'BBM_error_count'};
+				$statusLevel_a[3]->{$PD->{'pd'}.'_BBM_error_count'} = $PD->{'BBM Error Count'};
 			}
 		}
-		elsif(exists $PD->{'Predictive Failure Count'}){
+		if(exists($PD->{'Predictive Failure Count'})){
 			if($PD->{'Predictive Failure Count'} > '0'){
 				$status = 'Warning';
 				push $statusLevel_a[1], $PD->{'pd'}.'_Predictive_failure_count';
-				$statusLevel_a[3]->{$PD->{'pd'}.'_Predictive_failure_count'} = $PD->{'Predictive_failure_count'};
+				$statusLevel_a[3]->{$PD->{'pd'}.'_Predictive_failure_count'} = $PD->{'Predictive Failure Count'};
 			}
 		}
-		elsif(exists $PD->{'S.M.A.R.T alert flagged by drive'}){
+		if(exists($PD->{'S.M.A.R.T alert flagged by drive'})){
 			if($PD->{'S.M.A.R.T alert flagged by drive'} ne 'No'){
 				$status = 'Warning';
 				push $statusLevel_a[1], $PD->{'pd'}.'_SMART_flag';
 			}
 		}
-		elsif(exists $PD->{'Drive Temperature'}){
+		if(exists($PD->{'Drive Temperature'})){
 			my $temp = $PD->{'Drive Temperature'};
-			$temp =~ /([0-9]+)C/;
-			if(!(checkThreshs($1, $PD_TEMP_CRITICAL))){
-				$status = 'Critical';	
-				push $statusLevel_a[2], $PD->{'pd'}.'_Drive_temp';
+			if($temp ne 'N/A'){
+				$temp =~ /^([0-9]+)C/;
+				if(!(checkThreshs($1, $PD_TEMP_CRITICAL))){
+					$status = 'Critical';
+					push $statusLevel_a[2], $PD->{'pd'}.'_Drive_temp';
+				}
+				elsif(!(checkThreshs($1, $PD_TEMP_WARNING))){
+					$status = 'Warning';
+					push $statusLevel_a[1], $PD->{'pd'}.'_Drive_temp';
+				}
+				$statusLevel_a[3]->{$PD->{'pd'}.'_Drive_temp'} = $1;
 			}
-			elsif(!(checkThreshs($1, $PD_TEMP_CRITICAL))){
-				$status = 'Warning';
-				push $statusLevel_a[1], $PD->{'pd'}.'_Drive_temp';
-			}
-			$statusLevel_a[3]->{$PD->{'pd'}.'_Drive_temp'} = $1;
 		}
-		elsif(exists $PD->{'init'}){
+		if(exists($PD->{'init'})){
 			$status = 'Warning';
 			push $statusLevel_a[1], $PD->{'pd'}.'_Init';
 			$statusLevel_a[3]->{$PD->{'pd'}.'_Init'} = $PD->{'init'};
 		}
-		elsif(exists $PD->{'rebuild'}){
+		if(exists($PD->{'rebuild'})){
 			$status = 'Warning';
 			push $statusLevel_a[1], $PD->{'pd'}.'_Rebuild';
 			$statusLevel_a[3]->{$PD->{'pd'}.'_Rebuild'} = $PD->{'rebuild'};
@@ -613,7 +614,7 @@ sub getPDStatus{
 			}
 		}
 		else{
-			${$statusLevel_a[0]} = 'Warning';
+			${$statusLevel_a[0]} = 'Critical';
 		}
 	}
 }
@@ -751,7 +752,7 @@ sub getBBUStatus {
 					}
 				}
 				else{
-					${$statusLevel_a[0]} = 'Warning';
+					${$statusLevel_a[0]} = 'Critical';
 				}
 			}	
 		}
@@ -982,14 +983,12 @@ MAIN: {
 	getPDStatus(\@statusLevel_a, $PDDevicesToCheck);
 	getPDStatus(\@statusLevel_a, $PDInitToCheck);
 	getPDStatus(\@statusLevel_a, $PDRebuildToCheck);
-	use Data::Dumper;
-	print Dumper(@statusLevel_a);
-		
+
 	$exitCode = STATE_OK;
-	if($statusLevel_a[0] eq "Critical"){
+	if(${$statusLevel_a[0]} eq "Critical"){
 		$exitCode = STATE_CRITICAL;
 	}
-	if($statusLevel_a[0] eq "Warning"){
+	if(${$statusLevel_a[0]} eq "Warning"){
 		$exitCode = STATE_WARNING;
 	}
 	exit($exitCode);
