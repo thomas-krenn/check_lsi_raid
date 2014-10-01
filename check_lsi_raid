@@ -37,6 +37,8 @@ our $C_TEMP_WARNING = 80;
 our $C_TEMP_CRITICAL = 90;
 our $PD_TEMP_WARNING = 40;
 our $PD_TEMP_CRITICAL = 45;
+our $BBU_TEMP_WARNING = 50;
+our $BBU_TEMP_CRITICAL = 60;
 our ($ignerr_m, $ignerr_o, $ignerr_p, $ignerr_s) = (0, 0, 0, 0);
 our $NOENCLOSURES = 0;
 our $CONTROLLER = 0;
@@ -84,6 +86,9 @@ sub displayUsage {
 	Requires -Tw | --temperature-warn to be set.\n";
 	print "  [ -PDTw | --physicaldevicetemperature-warn ]\n	Specifies the disk temperature warning range, default is ${PD_TEMP_WARNING}C or more\n";
 	print "  [ -PDTc | --physicaldevicetemperature-critical ]\n	Specifies the disk temperature critical error range, default is ${PD_TEMP_CRITICAL}C or more.
+	Requires -PDTw | --physicaldevicetemperature-warn to be set.\n";
+	print "  [ -BBUTw | --bbutemperature-warning ]\n	Specifies the BBU temperature warning range, default is ${BBU_TEMP_WARNING}C or more\n";
+	print "  [ -BBUTc | --bbutemperature-critical ]\n	Specifies the BBU temperature critical error range, default is ${BBU_TEMP_CRITICAL}C or more.
 	Requires -PDTw | --physicaldevicetemperature-warn to be set.\n";
 	print "  [ -Im | --ignore-media-errors ]\n	Specifies the warning threshold for media errors per disk, default is $ignerr_m.\n";
 	print "  [ -Io | --ignore-other-errors ]\n	Specifies the warning threshold for other errors per disk, default is $ignerr_o.\n";
@@ -554,12 +559,15 @@ sub getBBUStatus {
 						}
 					elsif ($line =~ /^Temperature/){
 						$line =~ /([0-9]+) C$/;
-						#FIXME Check temperature here
-						if($1 > 20){
-							$status = 'Warning';
+						if(!(checkThreshs($1, $BBU_TEMP_CRITICAL))){
+							$status = 'Critical';
 							push $statusLevel_a[1], 'Battery_temperature';
-							$statusLevel_a[3]->{'Battery_temperature'} = $1;
 						}
+						elsif(!(checkThreshs($1, $BBU_TEMP_WARNING))){
+							$status = 'Warning';
+							push $statusLevel_a[2], 'Battery_temperature';
+						}
+						$statusLevel_a[3]->{'Battery_temperature'} = $1;
 					}
 				}
 				elsif($currBlock eq 'BBU_Firmware_Status'){
@@ -784,10 +792,7 @@ MAIN: {
 	my @enclosures;
 	my @logDevices;
 	my @physDevices;
-	my @temperature_w;
-	my @temperature_c;
-	my @physicalDeviceTemperature_w;
-	my @physicalDeviceTemperature_c;
+	my ($ctrTempW, $ctrTempC, $PDTempW,$PDTempC,$BBUTempW,$BBUTempC);
 	my $platform = $^O;
 
 	if ( !(GetOptions(
@@ -800,10 +805,12 @@ MAIN: {
 		'EID|enclosure=s' => \@enclosures,
 		'LD|logicaldevice=s' => \@logDevices,
 		'PD|physicaldevice=s' => \@physDevices,
-		'Tw|temperature-warn=s' => \@temperature_w,
-		'Tc|temperature-critical=s' => \@temperature_c,
-		'PDTw|physicaldevicetemperature-warn=s' => \@physicalDeviceTemperature_w,
-		'PDTc|physicaldevicetemperature-critical=s' => \@physicalDeviceTemperature_c,
+		'Tw|temperature-warn=s' => \$ctrTempW,
+		'Tc|temperature-critical=s' => \$ctrTempC,
+		'PDTw|physicaldevicetemperature-warn=s' => \$PDTempW,
+		'PDTc|physicaldevicetemperature-critical=s' => \$PDTempC,
+		'BBUTw|bbutemperature-warning=s' => \$BBU_TEMP_WARNING,
+		'BBUTc|bbutemperature-critical=s' => \$BBUTempC,
 		'Im|ignore-media-errors=i' => \$ignerr_m,
 		'Io|ignore-other-errors=i' => \$ignerr_o,
 		'Ip|ignore-predictive-fail-count=i' => \$ignerr_p,
