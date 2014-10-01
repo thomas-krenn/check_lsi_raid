@@ -704,7 +704,7 @@ sub getCVStatus {
 				elsif($currBlock eq 'Firmware_Status' && $line =~ /^Replacement required/){
 					$line =~ /([a-zA-Z0-9]*)$/;
 					if($1 ne "No") {
-						${$statusLevel_a[0]} = 'Warning';
+						${$statusLevel_a[0]} = 'Critical';
 						push $statusLevel_a[2],'CacheVault_replacement_required';
 					}
 				}
