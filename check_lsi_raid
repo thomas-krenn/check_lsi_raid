@@ -431,6 +431,43 @@ sub getLogicalDevices{
 	return \@foundDevs;
 }
 
+sub getLDStatus{
+	my @statusLevel_a = @{(shift)};
+	my @foundLDs = @{(shift)};
+	my $status;
+	foreach my $LD (@foundLDs){
+		if(exists($LD->{'State'})){
+			if($LD->{'State'} ne 'Optl'){
+				$status = 'Critical';
+				push $statusLevel_a[2], $LD->{'ld'}.'_State';
+				$statusLevel_a[3]->{$LD->{'ld'}.'_State'} = $LD->{'State'};
+			}
+		}
+		if(exists($LD->{'Consist'})){
+			if($LD->{'Consist'} ne 'Yes'){
+				$status = 'Warning';
+				push $statusLevel_a[1], $LD->{'ld'}.'_Consist';
+				$statusLevel_a[3]->{$LD->{'ld'}.'_Consist'} = $LD->{'Consist'};
+			}
+		}
+		if(exists($LD->{'init'})){
+			$status = 'Warning';
+			push $statusLevel_a[1], $LD->{'ld'}.'_Init';
+			$statusLevel_a[3]->{$LD->{'ld'}.'_Init'} = $LD->{'init'};
+		}
+	}
+	if(defined($status)){
+		if ($status eq 'Warning'){
+			if(${$statusLevel_a[0]} ne 'Critical'){
+				${$statusLevel_a[0]} = 'Warning';
+			}
+		}
+		else{
+			${$statusLevel_a[0]} = 'Critical';
+		}
+	}
+}
+
 # Returns information about:
 #		- Physical device status
 sub getPhysicalDevices{
