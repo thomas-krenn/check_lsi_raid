@@ -724,64 +724,13 @@ sub checkBBUorCVIsPresent{
 	return ($bbu, $cv);
 }
 
-# Nagios development guidelines: temperature threshold sheme
 # http://nagiosplug.sourceforge.net/developer-guidelines.html#THRESHOLDFORMAT
-# Returns a temperature range (array) in or out which a temperature should be
-# Array content: ("in" or "out", range from, range to)
-# Example ranges:
-#				Generate an alert if x...
-#	-Tw 10			< 0 or > 10, (outside the range of {0 .. 10})
-#	-Tw 10:			< 10, (outside {10 .. inf})
-#	-Tw ~:10		> 10, (outside the range of {-inf .. 10})
-#	-Tw 10:20		< 10 or > 20, (outside the range of {10 .. 20})
-#	-Tw @10:20		>= 10 and <= 20, (inside the range of {10 .. 20})
-sub getThresholds {
-	my @thresholds = @{($_[0])};
-	my $default = $_[1];
-
-	if(scalar(@thresholds) eq 0) {
-		return @thresholds = ("out", -273, $default);
-	}
-	if(substr($thresholds[0], 0, 1) eq "@") {
-		if($thresholds[0] =~ /^\@([0-9]*)\:([0-9]*)$/) {
-			@thresholds = ("in", $1, $2);
-		} else {
-			print "Invalid temperature parameter!\n";
-			exit(STATE_UNKNOWN);
-		}
-	} elsif(substr($thresholds[0], 0, 1) eq "~") {
-		if($thresholds[0] =~ /^\~\:([0-9]*)$/) {
-			@thresholds = ("out", -273, $1);
-		} else {
-			print "Invalid temperature parameter!\n";
-			exit(STATE_UNKNOWN);
-		}
-	} elsif(index($thresholds[0], ":") ne -1) {
-		if($thresholds[0] =~ /^([0-9]*)\:([0-9]{1,3})$/) {
-			@thresholds = ("out", $1, $2);
-		} elsif($thresholds[0] =~ /^([0-9]*)\:$/) {
-			@thresholds = ("in", -273, ($1 - 1));
-		} else {
-			print "Invalid temperature parameter!\n";
-			exit(STATE_UNKNOWN);
-		}
-	} else {
-		@thresholds = ("out", 0, $thresholds[0]);
-	}
-	if(($thresholds[1] =~ /^(-?[0-9]*)$/) && ($thresholds[2] =~ /^(-?[0-9]*)$/)) {
-		return @thresholds;
-	} else {
-		print "Invalid temperature parameter!\n";
-		exit(STATE_UNKNOWN);
-	}
-}
-
-#	Generate an alert if x...
-#	-Tw 10			< 0 or > 10, (outside the range of {0 .. 10})
-#	-Tw 10:			< 10, (outside {10 .. inf})
-#	-Tw ~:10		> 10, (outside the range of {-inf .. 10})
-#	-Tw 10:20		< 10 or > 20, (outside the range of {10 .. 20})
-#	-Tw @10:20		>= 10 and <= 20, (inside the range of {10 .. 20})
+# Generate an alert if x...
+# -Tw 10			< 0 or > 10, (outside the range of {0 .. 10})
+# -Tw 10:			< 10, (outside {10 .. inf})
+# -Tw ~:10		> 10, (outside the range of {-inf .. 10})
+# -Tw 10:20		< 10 or > 20, (outside the range of {10 .. 20})
+# -Tw @10:20		>= 10 and <= 20, (inside the range of {10 .. 20})
 sub checkThreshs{
 	my $value = shift;
 	my $pattern = shift;
@@ -812,7 +761,7 @@ sub checkThreshs{
 		}
 	}
 	else{
-		print "Invalid temperature parameter: \"$pattern\"!";
+		print "Invalid temperature parameter! ($pattern)\n";
 		exit(STATE_UNKNOWN);
 	}
 	return 1;
@@ -823,11 +772,10 @@ MAIN: {
 	# Create default sensor arrays and push them to status level
 	my @statusLevel_a ;
 	my $status_str = 'OK';
-	my $status_ref = \$status_str;
 	my $warnings_a = [];
 	my $criticals_a = [];
 	my $verboseValues_h = {};
-	push @statusLevel_a, $status_ref;
+	push @statusLevel_a, \$status_str;
 	push @statusLevel_a, $warnings_a;
 	push @statusLevel_a, $criticals_a;
 	push @statusLevel_a, $verboseValues_h;
