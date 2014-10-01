@@ -529,6 +529,21 @@ sub getPhysicalDevices{
 	return \@foundDevs;
 }
 
+sub getPDStatus{
+	my @statusLevel_a = @{(shift)};
+	my @foundPDs = @{(shift)};
+	my $status;
+	foreach my $PD (@foundPDs){
+		if(exists $PD->{'State'}){
+			if($PD->{'State'} ne 'Onln'){
+				$status = 'Critical';
+				push $statusLevel_a[2], $PD->{'pd'}+'_State';
+				$statusLevel_a[3]->{$PD->{'pd'}+'_State'} = $PD->{'State'};
+			}
+		}
+	}
+}
+
 # Returns information about:
 #		- Battery Backup Unit status
 #		- Temperature, Battery status, voltage
@@ -884,15 +899,16 @@ MAIN: {
 	if($bbuPresent == 1){getBBUStatus($storcli, \@statusLevel_a); }
 	if($cvPresent == 1){ getCVStatus($storcli, \@statusLevel_a); }
 	
-	use Data::Dumper;
-	print Dumper(@statusLevel_a);
-	
 	my $LDDevicesToCheck = getLogicalDevices($storcli, \@logDevices, 'all');
 	my $LDInitToCheck = getLogicalDevices($storcli, \@logDevices, 'init');
 	my $PDDevicesToCheck = getPhysicalDevices($storcli, \@enclosures, \@physDevices, 'all');
 	my $PDInitToCheck = getPhysicalDevices($storcli, \@enclosures, \@physDevices, 'initialization');
 	my $PDRebuildToCheck = getPhysicalDevices($storcli, \@enclosures, \@physDevices, 'rebuild');
 	
+	getPDStatus(\@statusLevel_a, $PDDevicesToCheck);
+	use Data::Dumper;
+	print Dumper(@statusLevel_a);
+		
 	$exitCode = STATE_OK;
 	if($statusLevel_a[0] eq "Critical"){
 		$exitCode = STATE_CRITICAL;
