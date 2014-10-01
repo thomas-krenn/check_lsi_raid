@@ -1017,6 +1017,8 @@ MAIN: {
 	my $PDInitToCheck = getPhysicalDevices($storcli, \@enclosures, \@physDevices, 'initialization');
 	my $PDRebuildToCheck = getPhysicalDevices($storcli, \@enclosures, \@physDevices, 'rebuild');
 	
+	getLDStatus(\@statusLevel_a, $LDDevicesToCheck);
+	getLDStatus(\@statusLevel_a, $LDInitToCheck);
 	getPDStatus(\@statusLevel_a, $PDDevicesToCheck);
 	getPDStatus(\@statusLevel_a, $PDInitToCheck);
 	getPDStatus(\@statusLevel_a, $PDRebuildToCheck);
