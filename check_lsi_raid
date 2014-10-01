@@ -541,6 +541,80 @@ sub getPDStatus{
 				$statusLevel_a[3]->{$PD->{'pd'}.'_State'} = $PD->{'State'};
 			}
 		}
+		elsif(exists $PD->{'Shield Counter'}){
+			if($PD->{'Shield Counter'} > '0'){
+				$status = 'Warning';
+				push $statusLevel_a[1], $PD->{'pd'}.'_Shield_counter';
+				$statusLevel_a[3]->{$PD->{'pd'}.'_Shield_Counter'} = $PD->{'Shield_counter'};
+			}
+		}
+		elsif(exists $PD->{'Media Error Count'}){
+			if($PD->{'Media Error Count'} > '0'){
+				$status = 'Warning';
+				push $statusLevel_a[1], $PD->{'pd'}.'_Media_error_count';
+				$statusLevel_a[3]->{$PD->{'pd'}.'_Media_error_count'} = $PD->{'Media_error_count'};
+			}
+		}
+		elsif(exists $PD->{'Other Error Count'}){
+			if($PD->{'Other Error Count'} > '0'){
+				$status = 'Warning';
+				push $statusLevel_a[1], $PD->{'pd'}.'_Other_error_count';
+				$statusLevel_a[3]->{$PD->{'pd'}.'_Other_error_count'} = $PD->{'Other_error_count'};
+			}
+		}
+		elsif(exists $PD->{'BBM Error Count'}){
+			if($PD->{'BBM Error Count'} > '0'){
+				$status = 'Warning';
+				push $statusLevel_a[1], $PD->{'pd'}.'_BBM_error_count';
+				$statusLevel_a[3]->{$PD->{'pd'}.'_BBM_error_count'} = $PD->{'BBM_error_count'};
+			}
+		}
+		elsif(exists $PD->{'Predictive Failure Count'}){
+			if($PD->{'Predictive Failure Count'} > '0'){
+				$status = 'Warning';
+				push $statusLevel_a[1], $PD->{'pd'}.'_Predictive_failure_count';
+				$statusLevel_a[3]->{$PD->{'pd'}.'_Predictive_failure_count'} = $PD->{'Predictive_failure_count'};
+			}
+		}
+		elsif(exists $PD->{'S.M.A.R.T alert flagged by drive'}){
+			if($PD->{'S.M.A.R.T alert flagged by drive'} ne 'No'){
+				$status = 'Warning';
+				push $statusLevel_a[1], $PD->{'pd'}.'_SMART_flag';
+			}
+		}
+		elsif(exists $PD->{'Drive Temperature'}){
+			my $temp = $PD->{'Drive Temperature'};
+			$temp =~ /([0-9]+)C/;
+			if(!(checkThreshs($1, $PD_TEMP_CRITICAL))){
+				$status = 'Critical';	
+				push $statusLevel_a[2], $PD->{'pd'}.'_Drive_temp';
+			}
+			elsif(!(checkThreshs($1, $PD_TEMP_CRITICAL))){
+				$status = 'Warning';
+				push $statusLevel_a[1], $PD->{'pd'}.'_Drive_temp';
+			}
+			$statusLevel_a[3]->{$PD->{'pd'}.'_Drive_temp'} = $1;
+		}
+		elsif(exists $PD->{'init'}){
+			$status = 'Warning';
+			push $statusLevel_a[1], $PD->{'pd'}.'_Init';
+			$statusLevel_a[3]->{$PD->{'pd'}.'_Init'} = $PD->{'init'};
+		}
+		elsif(exists $PD->{'rebuild'}){
+			$status = 'Warning';
+			push $statusLevel_a[1], $PD->{'pd'}.'_Rebuild';
+			$statusLevel_a[3]->{$PD->{'pd'}.'_Rebuild'} = $PD->{'rebuild'};
+		}
+	}
+	if(defined($status)){
+		if ($status eq 'Warning'){
+			if(${$statusLevel_a[0]} ne 'Critical'){
+				${$statusLevel_a[0]} = 'Warning';
+			}
+		}
+		else{
+			${$statusLevel_a[0]} = 'Warning';
+		}
 	}
 }
 
@@ -906,6 +980,8 @@ MAIN: {
 	my $PDRebuildToCheck = getPhysicalDevices($storcli, \@enclosures, \@physDevices, 'rebuild');
 	
 	getPDStatus(\@statusLevel_a, $PDDevicesToCheck);
+	getPDStatus(\@statusLevel_a, $PDInitToCheck);
+	getPDStatus(\@statusLevel_a, $PDRebuildToCheck);
 	use Data::Dumper;
 	print Dumper(@statusLevel_a);
 		
@@ -916,23 +992,5 @@ MAIN: {
 	if($statusLevel_a[0] eq "Warning"){
 		$exitCode = STATE_WARNING;
 	}
-##	($newexitstatus, $statusMessage) = getLogicalDeviceStatus($sudo, $storcli, $controller, \@logDevices, "init");
-##	$newstatusMessage .= $statusMessage;
-#	$exitstatus = getExitState($newexitstatus, $exitstatus);
-#	($newexitstatus, $statusMessage) = getLogicalDeviceStatus($storcli, \@logDevices, "all");
-#	$newstatusMessage .= $statusMessage;
-##	$exitstatus = getExitState($newexitstatus, $exitstatus);
-##	($newexitstatus, $statusMessage) = getPhysDeviceStatus($sudo, $storcli, $controller, \@enclosures, \@physDevices, \@physicalDeviceTemperature_w, \@physicalDeviceTemperature_c, "initialization");
-##	$newstatusMessage .= $statusMessage;
-##	$exitstatus = getExitState($newexitstatus, $exitstatus);
-##	($newexitstatus, $statusMessage) = getPhysDeviceStatus($sudo, $storcli, $controller, \@enclosures, \@physDevices, \@physicalDeviceTemperature_w, \@physicalDeviceTemperature_c, "rebuild");
-##	$newstatusMessage .= $statusMessage;
-##	$exitstatus = getExitState($newexitstatus, $exitstatus);
-#	($newexitstatus, $statusMessage) = getPhysDeviceStatus($storcli,\@enclosures, \@physDevices, \@physicalDeviceTemperature_w, \@physicalDeviceTemperature_c, "all");
-#	$newstatusMessage .= $statusMessage;
-#	$exitstatus = getExitState($newexitstatus, $exitstatus);
-#	if($exitstatus == 0) { print "LSIRAID OK (Ctrl #$controller) | STATUS=$exitstatus\n"; }
-#	elsif($exitstatus == 1) { chop($newstatusMessage); chop($newstatusMessage); print "LSIRAID WARNING (Ctrl #$controller): [$newstatusMessage] | STATUS=$exitstatus\n"; }
-#	elsif($exitstatus == 2) { chop($newstatusMessage); chop($newstatusMessage); print "LSIRAID CRITICAL (Ctrl #$controller): [$newstatusMessage] | STATUS=$exitstatus\n"; }
-#	exit($exitCode);
+	exit($exitCode);
 }
