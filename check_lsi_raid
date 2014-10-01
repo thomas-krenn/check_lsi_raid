@@ -537,8 +537,8 @@ sub getPDStatus{
 		if(exists $PD->{'State'}){
 			if($PD->{'State'} ne 'Onln'){
 				$status = 'Critical';
-				push $statusLevel_a[2], $PD->{'pd'}+'_State';
-				$statusLevel_a[3]->{$PD->{'pd'}+'_State'} = $PD->{'State'};
+				push $statusLevel_a[2], $PD->{'pd'}.'_State';
+				$statusLevel_a[3]->{$PD->{'pd'}.'_State'} = $PD->{'State'};
 			}
 		}
 	}
