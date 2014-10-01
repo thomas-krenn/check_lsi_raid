@@ -561,11 +561,11 @@ sub getBBUStatus {
 						$line =~ /([0-9]+) C$/;
 						if(!(checkThreshs($1, $BBU_TEMP_CRITICAL))){
 							$status = 'Critical';
-							push $statusLevel_a[1], 'Battery_temperature';
+							push $statusLevel_a[2], 'Battery_temperature';
 						}
 						elsif(!(checkThreshs($1, $BBU_TEMP_WARNING))){
 							$status = 'Warning';
-							push $statusLevel_a[2], 'Battery_temperature';
+							push $statusLevel_a[1], 'Battery_temperature';
 						}
 						$statusLevel_a[3]->{'Battery_temperature'} = $1;
 					}
@@ -792,7 +792,6 @@ MAIN: {
 	my @enclosures;
 	my @logDevices;
 	my @physDevices;
-	my ($ctrTempW, $ctrTempC, $PDTempW,$PDTempC,$BBUTempW,$BBUTempC);
 	my $platform = $^O;
 
 	if ( !(GetOptions(
@@ -805,12 +804,12 @@ MAIN: {
 		'EID|enclosure=s' => \@enclosures,
 		'LD|logicaldevice=s' => \@logDevices,
 		'PD|physicaldevice=s' => \@physDevices,
-		'Tw|temperature-warn=s' => \$ctrTempW,
-		'Tc|temperature-critical=s' => \$ctrTempC,
-		'PDTw|physicaldevicetemperature-warn=s' => \$PDTempW,
-		'PDTc|physicaldevicetemperature-critical=s' => \$PDTempC,
+		'Tw|temperature-warn=s' => \$C_TEMP_WARNING,
+		'Tc|temperature-critical=s' => \$C_TEMP_CRITICAL,
+		'PDTw|physicaldevicetemperature-warn=s' => \$PD_TEMP_WARNING,
+		'PDTc|physicaldevicetemperature-critical=s' => \$PD_TEMP_CRITICAL,
 		'BBUTw|bbutemperature-warning=s' => \$BBU_TEMP_WARNING,
-		'BBUTc|bbutemperature-critical=s' => \$BBUTempC,
+		'BBUTc|bbutemperature-critical=s' => \$BBU_TEMP_CRITICAL,
 		'Im|ignore-media-errors=i' => \$ignerr_m,
 		'Io|ignore-other-errors=i' => \$ignerr_o,
 		'Ip|ignore-predictive-fail-count=i' => \$ignerr_p,
