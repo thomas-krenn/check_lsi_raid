@@ -974,6 +974,34 @@ sub checkThreshs{
 	return 1;
 }
 
+sub getStatusString{
+	my $level = shift;
+	my @statusLevel_a = @{(shift)};
+	my @sensors_a;
+	my $status_str = "";
+	if($level eq "Warning"){
+		@sensors_a = @{$statusLevel_a[1]};
+	}
+	if($level eq "Critical"){
+		@sensors_a = @{$statusLevel_a[2]};
+	}
+	if($level eq "Warning" || $level eq "Critical"){
+		if(@sensors_a){
+			# Print which sensors are Warn or Crit
+			foreach my $sensor (@sensors_a){
+				$status_str .= "[".$sensor." = ".$level;
+				if($VERBOSITY){
+					if(exists($statusLevel_a[3]->{$sensor})){
+						$status_str .= " (".$statusLevel_a[3]->{$sensor}.")";
+					}
+				}
+				$status_str .= "]";
+			}
+		}
+	}
+	return $status_str;
+}
+
 MAIN: {
 	my ($storcli, $sudo, $noSudo, $version, $exitCode);
 	# Create default sensor arrays and push them to status level
@@ -1094,6 +1122,10 @@ MAIN: {
 	getPDStatus(\@statusLevel_a, $PDDevicesToCheck);
 	getPDStatus(\@statusLevel_a, $PDInitToCheck);
 	getPDStatus(\@statusLevel_a, $PDRebuildToCheck);
+
+	print ${$statusLevel_a[0]};
+	print getStatusString("Critical",\@statusLevel_a);
+	print getStatusString("Warning",\@statusLevel_a);
 
 	$exitCode = STATE_OK;
 	if(${$statusLevel_a[0]} eq "Critical"){
