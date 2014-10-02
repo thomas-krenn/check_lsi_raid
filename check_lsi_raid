@@ -647,7 +647,7 @@ sub getPDStatus{
 			if($PD->{'Shield Counter'} > '0'){
 				$status = 'Warning';
 				push $statusLevel_a[1], $PD->{'pd'}.'_Shield_counter';
-				$statusLevel_a[3]->{$PD->{'pd'}.'_Shield_Counter'} = $PD->{'Shield Counter'};
+				$statusLevel_a[3]->{$PD->{'pd'}.'_Shield_counter'} = $PD->{'Shield Counter'};
 			}
 		}
 		if(exists($PD->{'Media Error Count'})){
@@ -1088,7 +1088,7 @@ MAIN: {
 	$storcli .= " /c$CONTROLLER";
 	# Check if the controller number can be used
 	if(!getControllerTime($storcli)){
-		print "Invalid controller number, device not found!\n";
+		print "Error: invalid controller number, controller not found!\n";
 		exit(STATE_UNKNOWN);
 	}
 	# Prepare command line arrays
@@ -1097,7 +1097,7 @@ MAIN: {
 	@physDevices = split(/,/,join(',', @physDevices));
 	# Check if the BBU param is correct
 	if(($bbu != 1) && ($bbu != 0)) {
-		print "Invalid BBU/CV parameter, must be 0 or 1!\n";
+		print "Error: invalid BBU/CV parameter, must be 0 or 1!\n";
 		exit(STATE_UNKNOWN);
 	}
 	my ($bbuPresent,$cvPresent) = (0,0);
@@ -1123,7 +1123,7 @@ MAIN: {
 	getPDStatus(\@statusLevel_a, $PDInitToCheck);
 	getPDStatus(\@statusLevel_a, $PDRebuildToCheck);
 
-	print ${$statusLevel_a[0]};
+	print ${$statusLevel_a[0]}." ";
 	print getStatusString("Critical",\@statusLevel_a);
 	print getStatusString("Warning",\@statusLevel_a);
 
