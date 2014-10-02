@@ -511,7 +511,7 @@ sub getLDStatus{
 		}
 	}
 	if(defined($status)){
-		if ($status eq 'Warning'){
+		if($status eq 'Warning'){
 			if(${$statusLevel_a[0]} ne 'Critical'){
 				${$statusLevel_a[0]} = 'Warning';
 			}
@@ -519,6 +519,7 @@ sub getLDStatus{
 		else{
 			${$statusLevel_a[0]} = 'Critical';
 		}
+		$statusLevel_a[3]->{'LD_status'} = $status;
 	}
 }
 
@@ -719,6 +720,7 @@ sub getPDStatus{
 		else{
 			${$statusLevel_a[0]} = 'Critical';
 		}
+		$statusLevel_a[3]->{'PD_status'} = $status;
 	}
 }
 
@@ -860,7 +862,8 @@ sub getBBUStatus {
 				else{
 					${$statusLevel_a[0]} = 'Critical';
 				}
-			}	
+				$statusLevel_a[3]->{'BBU_status'} = $status;
+			}
 		}
 	}
 	else {
@@ -881,6 +884,7 @@ sub getCVStatus {
 	my @statusLevel_a = @{(shift)};
 	my $command = "$storcli /cv show status";
 
+	my $status;
 	my @output = `$command`;
 	if(checkCommandStatus(\@output)) {
 		my $currBlock;
@@ -894,9 +898,7 @@ sub getCVStatus {
 				if($currBlock eq 'Cachevault_Info' && $line =~ /^State/){
 					my @vals = split('\s{2,}',$line);
 					if($vals[1] ne "Optimal") {
-						if(${$statusLevel_a[0]} ne 'Critical'){
-							${$statusLevel_a[0]} = 'Warning';
-						}
+						$status = 'Warning';
 						push $statusLevel_a[1], 'CacheVault_state';
 						$statusLevel_a[3]->{'CacheVault_state'} = $vals[1]
 					}
@@ -904,10 +906,21 @@ sub getCVStatus {
 				elsif($currBlock eq 'Firmware_Status' && $line =~ /^Replacement required/){
 					$line =~ /([a-zA-Z0-9]*)$/;
 					if($1 ne "No") {
-						${$statusLevel_a[0]} = 'Critical';
+						$status = 'Critical';
 						push $statusLevel_a[2],'CacheVault_replacement_required';
 					}
 				}
+			}
+			if(defined($status)){
+				if ($status eq 'Warning'){
+					if(${$statusLevel_a[0]} ne 'Critical'){
+						${$statusLevel_a[0]} = 'Warning';
+					}
+				}
+				else{
+					${$statusLevel_a[0]} = 'Critical';
+				}
+				$statusLevel_a[3]->{'CV_status'} = $status;
 			}
 		}
 	}
@@ -1105,7 +1118,9 @@ MAIN: {
 		($bbuPresent,$cvPresent) = checkBBUorCVIsPresent($storcli);
 		if($bbuPresent == 0 && $cvPresent == 0){
 			$statusLevel_a[0] = 'Critical';
-			push $criticals_a, 'BBU/CV_Present'
+			push $criticals_a, 'BBU/CV_Present';
+			$statusLevel_a[3]->{'BBU_status'} = 'Critical';
+			$statusLevel_a[3]->{'CV_status'} = 'Critical';
 		}
 	}
 	if($bbuPresent == 1){getBBUStatus($storcli, \@statusLevel_a); }
