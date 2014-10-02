@@ -1,6 +1,5 @@
 #!/usr/bin/perl -w
 # ======================================================================================
-# $Id$
 # check_lsi_raid: Nagios/Icinga plugin to check LSI Raid Controller status
 # --------------------------------------------------------------------------------------
 # Created as part of a semester project at the University of Applied Sciences Hagenberg
@@ -52,28 +51,11 @@ use constant {
 	STATE_UNKNOWN => 3,
  };
 
+# Header maps to parse logical and physical devices
 our @ldmap_a = ('DG/VD','TYPE','State','Access','Consist','Cache','Cac','sCC','Size');
 our @pdmap_a = ('EID:Slt','DID','State','DG','Size','Intf','Med','SED','PI','SeSz','Model','Sp');
 
-# Always return the highest state level
-sub getExitState {
-	my $returnState = STATE_OK;
-	# check if no state is NULL
-	if (!defined($_[0]) || !defined($_[1])) {
-		$returnState = STATE_UNKNOWN;
-	}
-	# check previous state
-	if ($_[0] > $returnState) {
-		$returnState = $_[0];
-	}
-	# check upcoming state
-	if ($_[1] > $returnState) {
-		$returnState = $_[1];
-	}
-	return $returnState;
-}
-
-# Explains the Usage of the plugin, also which options take which values
+# Print command line usage to stdout.
 sub displayUsage {
 	print "Usage: \n";
 	print "  [ -h | --help ]
@@ -171,10 +153,11 @@ suggest improvements.\n";
 	exit(STATE_OK);
 }
 
-# Prints the Name, Version of the Plugin
-# Also Prints the version of StorCLI
+# Prints the name anmd the version of check_lsi_raid. If storcli is available,
+# the version if it is printed also.
+# @param storcli The path to storcli command utility
 sub displayVersion {
-	my $storcli = $_[0];
+	my $storcli = shift;
 	if(defined($storcli)){
 		my @storcliVersion = `$storcli -v`;
 		foreach my $line (@storcliVersion){
@@ -188,6 +171,10 @@ sub displayVersion {
 	exit(STATE_OK);
 }
 
+# Checks if a storcli call was successfull, i.e. if the line 'Status = Sucess'
+# is present in the command output.
+# @param output The output of the storcli command as array
+# @return 1 on success, 0 if not
 sub checkCommandStatus{
 	my @output = @{(shift)};
 	foreach my $line (@output){
@@ -202,15 +189,18 @@ sub checkCommandStatus{
 	}
 }
 
+# Shows the time the controller is using. Can be used to check if the
+# controller number is a correct one.
+# @param storcli The path to storcli command utility, followed by the controller
+# number, e.g. 'storcli64 /c0'.
+# @return 1 on success, 0 if not
 sub getControllerTime{
 	my $storcli = shift;
-	my $ctr = shift;
 	my @output = `$storcli show time`;
 	return (checkCommandStatus(\@output));
 }
 
-# Returns information about:
-#		- Controller status and controller temperature
+#TODO Update doc of method
 sub getControllerStatus {
 	my $sudo = $_[0];
 	my $storcli = $_[1];
@@ -423,7 +413,15 @@ sub getControllerStatus {
 	}
 }
 
-# Returns a list reference of found logical devices
+# Checks which logical devices are present for the given controller and parses
+# the logical devices to a list of hashes. Each hash represents a logical device
+# with its values from the output.
+# @param storcli The path to storcli command utility, followed by the controller
+# number, e.g. 'storcli64 /c0'.
+# @param logDevices If given, a list of desired logical device numbers
+# @param action The storcli action to check, 'all' or 'init'
+# @return A list of hashes, each hash is one logical device. Check ldmap_a for valid
+# hash keys.
 sub getLogicalDevices{
 	my $storcli = shift;
 	my @logDevices = @{(shift)};
@@ -482,6 +480,11 @@ sub getLogicalDevices{
 	return \@foundDevs;
 }
 
+# Checks the status of the logical devices.
+# @param statusLevel_a The status level array, elem 0 is the current status,
+# elem 1 the warning sensors, elem 2 the critical sensors, elem 3 the verbose
+# information for the sensors.
+# @param foundLDs The array of logical devices, created by getLogicalDevices
 sub getLDStatus{
 	my @statusLevel_a = @{(shift)};
 	my @foundLDs = @{(shift)};
@@ -519,8 +522,15 @@ sub getLDStatus{
 	}
 }
 
-# Returns information about:
-#		- Physical device status
+# Checks which physical devices are present for the given controller and parses
+# the physical devices to a list of hashes. Each hash represents a physical device
+# with its values from the output.
+# @param storcli The path to storcli command utility, followed by the controller
+# number, e.g. 'storcli64 /c0'.
+# @param physDevices If given, a list of desired physical device numbers
+# @param action The storcli action to check, 'all', 'initialization' or 'rebuild'
+# @return A list of hashes, each hash is one physical device. Check pdmap_a for valid
+# hash keys.
 sub getPhysicalDevices{
 	my $storcli = shift;
 	my @enclosures = @{(shift)};
@@ -616,6 +626,11 @@ sub getPhysicalDevices{
 	return \@foundDevs;
 }
 
+# Checks the status of the physical devices.
+# @param statusLevel_a The status level array, elem 0 is the current status,
+# elem 1 the warning sensors, elem 2 the critical sensors, elem 3 the vebose
+# information for the sensors.
+# @param foundPDs The array of physical devices, created by getPhysicalDevices
 sub getPDStatus{
 	my @statusLevel_a = @{(shift)};
 	my @foundPDs = @{(shift)};
@@ -707,9 +722,12 @@ sub getPDStatus{
 	}
 }
 
-# Returns information about:
-#		- Battery Backup Unit status
-#		- Temperature, Battery status, voltage
+# Checks the status of the BBU, parses 'bbu show status' for the given controller.
+# @param storcli The path to storcli command utility, followed by the controller
+# number, e.g. 'storcli64 /c0'.
+# @param statusLevel_a The status level array, elem 0 is the current status,
+# elem 1 the warning sensors, elem 2 the critical sensors, elem 3 the verbose
+# information for the sensors.
 sub getBBUStatus {
 	my $storcli = shift;
 	my @statusLevel_a = @{(shift)};
@@ -851,9 +869,13 @@ sub getBBUStatus {
 	}
 }
 
-# Returns information about:
-# - Cache Vault module status
-# - If CacheVault must be replaced
+# Checks the status of the CV module, parses 'cv show status' for the given
+# controller.
+# @param storcli The path to storcli command utility, followed by the controller
+# number, e.g. 'storcli64 /c0'.
+# @param statusLevel_a The status level array, elem 0 is the current status,
+# elem 1 the warning sensors, elem 2 the critical sensors, elem 3 the verbose
+# information for the sensors.
 sub getCVStatus {
 	my $storcli = shift;
 	my @statusLevel_a = @{(shift)};
@@ -896,10 +918,11 @@ sub getCVStatus {
 }
 
 # Checks if wheter BBU or CV is present
-# - One of the two show commands must return 'Success'
+# @param storcli The path to storcli command utility, followed by the controller
+# number, e.g. 'storcli64 /c0'.
+# @return A tuple, e.g. (0,0), where 0 means module is not present, 1 present
 sub checkBBUorCVIsPresent{
 	my $storcli = shift;
-	my $status = 0;
 	my ($bbu,$cv);
 	my @output = `$storcli /bbu show`;
 	if(checkCommandStatus(\@output)){ $bbu = 1; }
@@ -910,17 +933,15 @@ sub checkBBUorCVIsPresent{
 	return ($bbu, $cv);
 }
 
+# Checks if a given value is in a specified range, the range must follow the
+# nagios development guidelines:
 # http://nagiosplug.sourceforge.net/developer-guidelines.html#THRESHOLDFORMAT
-# Generate an alert if x...
-# -Tw 10			< 0 or > 10, (outside the range of {0 .. 10})
-# -Tw 10:			< 10, (outside {10 .. inf})
-# -Tw ~:10		> 10, (outside the range of {-inf .. 10})
-# -Tw 10:20		< 10 or > 20, (outside the range of {10 .. 20})
-# -Tw @10:20		>= 10 and <= 20, (inside the range of {10 .. 20})
+# @param value The given value to check the pattern for
+# @param pattern The pattern specifying the threshold range, e.g. '10:', '@10:20'
+# @return 0 if the value is outside the range, 1 if the value satisfies the range
 sub checkThreshs{
 	my $value = shift;
 	my $pattern = shift;
-
 	if($pattern =~ /(^[0-9]+$)/){
 		if($value < 0 || $value > $1){
 			return 0;
