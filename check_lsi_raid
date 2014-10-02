@@ -39,7 +39,9 @@ our $PD_TEMP_WARNING = 40;
 our $PD_TEMP_CRITICAL = 45;
 our $BBU_TEMP_WARNING = 50;
 our $BBU_TEMP_CRITICAL = 60;
-our ($ignerr_m, $ignerr_o, $ignerr_p, $ignerr_s) = (0, 0, 0, 0);
+our $CV_TEMP_WARNING = 70;
+our $CV_TEMP_CRITICAL = 85;
+our ($IGNERR_M, $IGNERR_O, $IGNERR_P, $IGNERR_S) = (0, 0, 0, 0);
 our $NOENCLOSURES = 0;
 our $CONTROLLER = 0;
 
@@ -74,49 +76,98 @@ sub getExitState {
 # Explains the Usage of the plugin, also which options take which values
 sub displayUsage {
 	print "Usage: \n";
-	print "  [ -h | --help ]\n	Display this help page\n";
-	print "  [ -v | -vv | -vvv | --verbose ]\n	Sets the verbosity level.\n	no -v is the normal single line output for Nagios/Icinga\n	-v is a more detailed version but still usable in Nagios.\n	-vv is a multiline output for debugging configuration errors or more detailed information.\n	-vvv is for plugin problem diagnosis.\n	For further information please visit: http://nagiosplug.sourceforge.net/developer-guidelines.html#AEN39\n";
-	print "  [ -V --version ]\n	Displays the Version of the tk-lsi-plugin and the version of StorCLI\n";
-	print "  [ -C <Controller Number> | --controller <Controller Number> ]\n	Specifies a Controller number, defaults to 0\n";
-	print "  [ -EID | --enclosure ]\n	Specifies one or more Enclosures, defaults to all\n	Takes either an integer as additional argument (>=0) or a comma seperated list(0,1,2,3,...)\n";
-	print "  [ -LD | --logicaldevice ]\n	Specifies one or more Logical Devices, defaults to all\n	Takes either an integer as additional argument (>=0) or a comma seperated list(0,1,2,3,...)\n";
-	print "  [ -PD | --physicaldevice ]\n	Specifies one or more Physical Devices, defaults to all\n	Takes either an integer as additional argument (>=0) or a comma seperated list(0,1,2,3,...)\n";
-	print "  [ -Tw | --temperature-warn ]\n	Specifies the RAID-Controller temperature warning range, default is ${C_TEMP_WARNING}C or more\n";
-	print "  [ -Tc | --temperature-critical ]\n	Specifies the RAID-Controller temperature critical error range, default is ${C_TEMP_CRITICAL}C or more.
-	Requires -Tw | --temperature-warn to be set.\n";
-	print "  [ -PDTw | --physicaldevicetemperature-warn ]\n	Specifies the disk temperature warning range, default is ${PD_TEMP_WARNING}C or more\n";
-	print "  [ -PDTc | --physicaldevicetemperature-critical ]\n	Specifies the disk temperature critical error range, default is ${PD_TEMP_CRITICAL}C or more.
-	Requires -PDTw | --physicaldevicetemperature-warn to be set.\n";
-	print "  [ -BBUTw | --bbutemperature-warning ]\n	Specifies the BBU temperature warning range, default is ${BBU_TEMP_WARNING}C or more\n";
-	print "  [ -BBUTc | --bbutemperature-critical ]\n	Specifies the BBU temperature critical error range, default is ${BBU_TEMP_CRITICAL}C or more.
-	Requires -PDTw | --physicaldevicetemperature-warn to be set.\n";
-	print "  [ -Im | --ignore-media-errors ]\n	Specifies the warning threshold for media errors per disk, default is $ignerr_m.\n";
-	print "  [ -Io | --ignore-other-errors ]\n	Specifies the warning threshold for other errors per disk, default is $ignerr_o.\n";
-	print "  [ -Ip | --ignore-predictive-fail-count ]\n	Specifies the warhing threshold for predictive fail count per disk, default is $ignerr_p.\n";
-	print "  [ -Is | --ignore-shield-counter ]\n	Specifies the warning threshold for shield counter per disk, default is $ignerr_s.\n";
-	print "  [ -p <path> | --path <path>]\n	Specifies the path to StorCLI, default is /usr/bin/storcli or C:\\Programme\\...\\storcli.exe\n";
-	print "  [ -b <0/1> | --BBU <0/1> ]\n	Check if a BBU or a CacheVault module is present. One must be present unless '-b 0' is defined.
-	This ensures that for a given controller a BBU/CV must be present per default.\n";
-	print "  [ --noenclosures <0/1> ]\n	Specifies if enclosures are present or not. 0 means enclosures are
-	present (default), 1 states no enclosures are used (no 'eall' in storcli commands).\n"
+	print "  [ -h | --help ]
+    Display this help page\n";
+	print "  [ -v | -vv | -vvv | --verbose ]
+    Sets the verbosity level.
+    No -v is the normal single line output for Nagios/Icinga, -v is a
+    more detailed version but still usable in Nagios. -vv is a
+    multiline output for debugging configuration errors or more
+    detailed information. -vvv is for plugin problem diagnosis.
+    For further information please visit:
+        http://nagiosplug.sourceforge.net/developer-guidelines.html#AEN39\n";
+	print "  [ -V --version ]
+    Displays the plugin and, if available, the version if StorCLI.\n";
+	print "  [ -C <num> | --controller <num> ]
+    Specifies a controller number, defaults to 0.\n";
+	print "  [ -EID <ids> | --enclosure <ids> ]
+    Specifies one or more enclosure numbers, per default all enclosures. Takes either
+    an integer as additional argument or a commaseperated list,
+    e.g. '0,1,2'. With --noenclosures enclosures can be disabled.\n";
+	print "  [ -LD <ids> | --logicaldevice <ids>]
+    Specifies one or more logical devices, defaults to all. Takes either an
+    integer as additional argument or a comma seperated list e.g. '0,1,2'.\n";
+	print "  [ -PD <ids> | --physicaldevice <ids> ]
+    Specifies one or more physical devices, defaults to all. Takes either an
+    integer as additional argument or a comma seperated list e.g. '0,1,2'.\n";
+	print "  [ -Tw <temp> | --temperature-warn <temp> ]
+    Specifies the RAID controller temperature warning threshold, the default
+    threshold is ${C_TEMP_WARNING}C.\n";
+	print "  [ -Tc <temp> | --temperature-critical <temp> ]
+    Specifies the RAID controller temperature critical threshold, the default
+    threshold is ${C_TEMP_CRITICAL}C.\n";
+	print "  [ -PDTw <temp> | --physicaldevicetemperature-warn <temp> ]
+    Specifies the disk temperature warning threshold, the default threshold
+    is ${PD_TEMP_WARNING}C.\n";
+	print "  [ -PDTc <temp> | --physicaldevicetemperature-critical <temp> ]
+    Specifies the disk temperature critical threshold, the default threshold
+    is ${PD_TEMP_CRITICAL}C.\n";
+	print "  [ -BBUTw <temp> | --bbutemperature-warning <temp> ]
+    Specifies the BBU temperature warning threshold, default threshold 
+    is ${BBU_TEMP_WARNING}C.\n";
+	print "  [ -BBUTc <temp> | --bbutemperature-critical <temp> ]
+    Specifies the BBU temperature critical threshold, default threshold 
+    is ${BBU_TEMP_CRITICAL}C.\n";
+    print "  [ -CVTw <temp> | --cvtemperature-warning <temp> ]
+    Specifies the CV temperature warning threshold, default threshold 
+    is ${CV_TEMP_WARNING}C.\n";
+    print "  [ -CVTc <temp> | --cvtemperature-critical <temp> ]
+    Specifies the CV temperature critical threshold, default threshold 
+    is ${CV_TEMP_CRITICAL}C.\n";
+	print "  [ -Im <count> | --ignore-media-errors <count> ]
+    Specifies the warning threshold for media errors per disk, the default
+    threshold is $IGNERR_M.\n";
+	print "  [ -Io <count> | --ignore-other-errors <count> ]
+    Specifies the warning threshold for media errors per disk, the default
+    threshold is $IGNERR_O.\n";
+	print "  [ -Ip <count> | --ignore-predictive-fail-count <count> ]
+    Specifies the warning threshold for media errors per disk, the default
+    threshold is $IGNERR_P.\n";
+	print "  [ -Is <count> | --ignore-shield-counter <count> ]
+    Specifies the warning threshold for media errors per disk, the default
+    threshold is $IGNERR_S.\n";
+	print "  [ -p <path> | --path <path>]
+    Specifies the path to StorCLI, per default uses the tool 'which' to get 
+    the StorCLI path.\n";
+	print "  [ -b <0/1> | --BBU <0/1> ]
+    Check if a BBU or a CacheVault module is present. One must be present unless
+    '-b 0' is defined. This ensures that for a given controller a BBU/CV must be
+    present per default.\n";
+	print "  [ --noenclosures <0/1> ]
+    Specifies if enclosures are present or not. 0 means enclosures are
+    present (default), 1 states no enclosures are used (no 'eall' in
+    storcli commands).\n"
 }
 
 # Displays a short Help text for the user
 sub displayHelp {
-	print $NAME . " Version: " . $VERSION ."\n";
+	print $NAME."\n";
+	print "Pulgin version: " . $VERSION ."\n";
 	print "Copyright (C) 2013 Thomas-Krenn.AG\n";
-	print "Current updates available at http://git.thomas-krenn.com/check_lsi_raid.git\n";
-	print "This Nagios/Icinga Plugin checks LSI RAID-Controllers for Controller, \nPhysical-Device and Logical Device warnings and errors.\n";
-	print "In order for this plugin to work properly you need to add the \nnagios-user to your sudoers file (or create a new one in /etc/sudoers.d/)\n";
+	print "Current updates available at
+    http://git.thomas-krenn.com/check_lsi_raid.git\n";
+	print "This Nagios/Icinga Plugin checks LSI RAID controllers for controller,
+physical device, logical device, BBU and CV warnings and errors.\n";
+	print "In order for this plugin to work properly you need to add the nagios
+user to your sudoers file (or create a new one in /etc/sudoers.d/).\n";
 	displayUsage();
 	print "Further information about this plugin can be found at:
-  http://www.thomas-krenn.com/de/wiki/LSI_RAID_Monitoring_Plugin and
-  http://www.thomas-krenn.com/de/wiki/LSI_RAID_Monitoring_Plugin
+    http://www.thomas-krenn.com/de/wiki/LSI_RAID_Monitoring_Plugin and
+    http://www.thomas-krenn.com/de/wiki/LSI_RAID_Monitoring_Plugin
 Please send an email to the tk-monitoring plugin-user mailing list:
-  tk-monitoring-plugins-user\@lists.thomas-krenn.com
+    tk-monitoring-plugins-user\@lists.thomas-krenn.com
 if you have questions regarding use of this software, to submit patches, or
-suggest improvements. The mailing list archive is available at:
-  http://lists.thomas-krenn.com/pipermail/tk-monitoring-plugins-user\n";
+suggest improvements.\n";
 	exit(STATE_OK);
 }
 
@@ -937,10 +988,10 @@ MAIN: {
 		'PDTc|physicaldevicetemperature-critical=s' => \$PD_TEMP_CRITICAL,
 		'BBUTw|bbutemperature-warning=s' => \$BBU_TEMP_WARNING,
 		'BBUTc|bbutemperature-critical=s' => \$BBU_TEMP_CRITICAL,
-		'Im|ignore-media-errors=i' => \$ignerr_m,
-		'Io|ignore-other-errors=i' => \$ignerr_o,
-		'Ip|ignore-predictive-fail-count=i' => \$ignerr_p,
-		'Is|ignore-shield-counter=i' => \$ignerr_s,
+		'Im|ignore-media-errors=i' => \$IGNERR_M,
+		'Io|ignore-other-errors=i' => \$IGNERR_O,
+		'Ip|ignore-predictive-fail-count=i' => \$IGNERR_P,
+		'Is|ignore-shield-counter=i' => \$IGNERR_S,
 		'p|path=s' => \$storcli,
 		'b|BBU=i' => \$bbu,
 		'noenclosures=i' => \$NOENCLOSURES,
