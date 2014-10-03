@@ -1299,8 +1299,8 @@ MAIN: {
 		if($bbuPresent == 0 && $cvPresent == 0){
 			$statusLevel_a[0] = 'Critical';
 			push $criticals_a, 'BBU/CV_Present';
-			$statusLevel_a[3]->{'BBU_status'} = 'Critical';
-			$statusLevel_a[3]->{'CV_status'} = 'Critical';
+			$statusLevel_a[3]->{'BBU_Status'} = 'Critical';
+			$statusLevel_a[3]->{'CV_Status'} = 'Critical';
 		}
 	}
 	if($bbuPresent == 1){getBBUStatus($storcli, \@statusLevel_a, $verboseCommands_a); }
