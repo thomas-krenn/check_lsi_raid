@@ -1010,28 +1010,34 @@ sub getStatusString{
 	if($level eq "Critical"){
 		@sensors_a = @{$statusLevel_a[2]};
 	}
-	# Check which parts where checked
+	# Add the controller parts only once
 	my $parts = '';
-	my @keys = ('LD_Status','PD_Status','BBU_Status','CV_Status');
-	foreach my $key (@keys){
-		$key =~ /^([A-Z]+)\_.*$/;
-		my $part = $1;
-		if(${$statusLevel_a[0]} eq 'OK'){
-			if(exists($statusLevel_a[3]->{$key}) && $statusLevel_a[3]->{$key} eq 'OK'){
-				$parts .= ", " unless $parts eq '';
-				$parts .= $part;
+	# level comes from the method call, not the real status level
+	if($level eq "Critical"){
+		my @keys = ('LD_Status','PD_Status','BBU_Status','CV_Status');
+		# Check which parts where checked
+		foreach my $key (@keys){
+			$key =~ /^([A-Z]+)\_.*$/;
+			my $part = $1;
+			if(${$statusLevel_a[0]} eq 'OK'){
+				if(exists($statusLevel_a[3]->{$key}) && $statusLevel_a[3]->{$key} eq 'OK'){
+					$parts .= ", " unless $parts eq '';
+					$parts .= $part;
+				}
 			}
-		}
-		else{
-			if(exists($statusLevel_a[3]->{$key}) && $statusLevel_a[3]->{$key} ne 'OK'){
-				$parts .= ", " unless $parts eq '';
-				$parts .= $part;
+			else{
+				if(exists($statusLevel_a[3]->{$key}) && $statusLevel_a[3]->{$key} ne 'OK'){
+					$parts .= ", " unless $parts eq '';
+					$parts .= $part;
+					$parts .= ' '.substr($statusLevel_a[3]->{$key}, 0, 4);
+				}
 			}
 		}
 	}
 	$status_str.= '(';
 	$status_str .= $parts unless !defined($parts);
 	$status_str.= ')';
+	$status_str.= ' ' unless !(@sensors_a);
 	if($level eq "Warning" || $level eq "Critical"){
 		if(@sensors_a){
 			# Print which sensors are Warn or Crit
