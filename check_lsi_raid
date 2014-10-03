@@ -723,7 +723,7 @@ sub getPDStatus{
 		}
 	}
 	if(defined($status)){
-		if ($status eq 'Warning'){
+		if($status eq 'Warning'){
 			if(${$statusLevel_a[0]} ne 'Critical'){
 				${$statusLevel_a[0]} = 'Warning';
 			}
@@ -772,7 +772,7 @@ sub getBBUStatus {
 								$statusLevel_a[3]->{'BBU_State'} = $1
 							}
 						}
-					elsif ($line =~ /^Temperature/){
+					elsif($line =~ /^Temperature/){
 						$line =~ /([0-9]+) C$/;
 						if(!(checkThreshs($1, $BBU_TEMP_CRITICAL))){
 							$status = 'Critical';
@@ -871,7 +871,7 @@ sub getBBUStatus {
 				}
 			}
 			if(defined($status)){
-				if ($status eq 'Warning'){
+				if($status eq 'Warning'){
 					if(${$statusLevel_a[0]} ne 'Critical'){
 						${$statusLevel_a[0]} = 'Warning';
 					}
@@ -947,7 +947,7 @@ sub getCVStatus {
 				}
 			}
 			if(defined($status)){
-				if ($status eq 'Warning'){
+				if($status eq 'Warning'){
 					if(${$statusLevel_a[0]} ne 'Critical'){
 						${$statusLevel_a[0]} = 'Warning';
 					}
@@ -1215,7 +1215,7 @@ MAIN: {
 	my @physDevices;
 	my $platform = $^O;
 
-	if ( !(GetOptions(
+	if( !(GetOptions(
 		'h|help' => sub {displayHelp();},
 		'v|verbose' => sub {$VERBOSITY = 1 },
 		'vv' => sub {$VERBOSITY = 2},
@@ -1242,7 +1242,7 @@ MAIN: {
 		'b|BBU=i' => \$bbu,
 		'noenclosures=i' => \$NOENCLOSURES,
 		'nosudo' => \$noSudo,
-	)))	{
+	))){
 		print $NAME . " Version: " . $VERSION ."\n";
 		displayUsage();
 		exit(STATE_UNKNOWN);
@@ -1251,7 +1251,7 @@ MAIN: {
 	# Check storcli tool
 	if(!defined($storcli)){
 		eval('use File::Which');
-		if ($platform eq 'linux'){
+		if($platform eq 'linux'){
 			$storcli = which('storcli');
 			if(!defined($storcli)){
 				$storcli = which('storcli64');
@@ -1268,7 +1268,7 @@ MAIN: {
 		print "Error: cannot find storcli executable.\n";
 		exit(STATE_UNKNOWN);
 	}
-	if ($platform eq 'linux') {
+	if($platform eq 'linux') {
 		if(!defined($noSudo)){
 			my $sudo;
 			chomp($sudo = `which sudo`);
