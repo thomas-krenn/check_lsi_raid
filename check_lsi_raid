@@ -919,15 +919,26 @@ sub getCVStatus {
 					my @vals = split('\s{2,}',$line);
 					if($vals[1] ne "Optimal") {
 						$status = 'Warning';
-						push $statusLevel_a[1], 'CacheVault_state';
-						$statusLevel_a[3]->{'CacheVault_state'} = $vals[1]
+						push $statusLevel_a[1], 'CV_State';
+						$statusLevel_a[3]->{'CV_State'} = $vals[1]
 					}
+				elsif($currBlock eq 'Cachevault_Info' && $line =~ /^Temperature/){
+					$line =~ /([0-9]+) C$/;
+					if(!(checkThreshs($1, $CV_TEMP_CRITICAL))){
+						$status = 'Critical';
+						push $statusLevel_a[2], 'CV_Temperature';
+					}
+					elsif(!(checkThreshs($1, $CV_TEMP_WARNING))){
+						$status = 'Warning';
+						push $statusLevel_a[1], 'CV_Temperature';
+					}
+					$statusLevel_a[3]->{'CV_Temperature'} = $1;
 				}
 				elsif($currBlock eq 'Firmware_Status' && $line =~ /^Replacement required/){
 					$line =~ /([a-zA-Z0-9]*)$/;
 					if($1 ne "No") {
 						$status = 'Critical';
-						push $statusLevel_a[2],'CacheVault_replacement_required';
+						push $statusLevel_a[2],'CV_Replacement_required';
 					}
 				}
 			}
@@ -1190,6 +1201,8 @@ MAIN: {
 		'PDTc|physicaldevicetemperature-critical=s' => \$PD_TEMP_CRITICAL,
 		'BBUTw|bbutemperature-warning=s' => \$BBU_TEMP_WARNING,
 		'BBUTc|bbutemperature-critical=s' => \$BBU_TEMP_CRITICAL,
+		'CVTw|cvtemperature-warning=s' => \$CV_TEMP_WARNING,
+		'CVTc|cvtemperature-critical=s' => \$CV_TEMP_CRITICAL,
 		'Im|ignore-media-errors=i' => \$IGNERR_M,
 		'Io|ignore-other-errors=i' => \$IGNERR_O,
 		'Ip|ignore-predictive-fail-count=i' => \$IGNERR_P,
