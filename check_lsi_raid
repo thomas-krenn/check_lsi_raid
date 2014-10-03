@@ -30,7 +30,7 @@ use warnings;
 use Getopt::Long qw(:config no_ignore_case);
 
 our $VERBOSITY = 0;
-our $VERSION = "1.2";
+our $VERSION = "2.0";
 our $NAME = "check_lsi_raid: Nagios/Icinga plugin to check LSI Raid Controller status";
 our $C_TEMP_WARNING = 80;
 our $C_TEMP_CRITICAL = 90;
