@@ -1010,6 +1010,13 @@ sub checkThreshs{
 	return 1;
 }
 
+# Get the status string as plugin output
+# @param level The desired level to get the status string for. Either 'Warning'
+# or 'Critical'.
+# @param statusLevel_a The status level array, elem 0 is the current status,
+# elem 1 the warning sensors, elem 2 the critical sensors, elem 3 the verbose
+# information for the sensors, elem 4 the used storcli commands.
+# @return The created status string
 sub getStatusString{
 	my $level = shift;
 	my @statusLevel_a = @{(shift)};
@@ -1066,6 +1073,16 @@ sub getStatusString{
 	return $status_str;
 }
 
+# Get the verbose string if a higher verbose level is used
+# @param statusLevel_a The status level array, elem 0 is the current status,
+# elem 1 the warning sensors, elem 2 the critical sensors, elem 3 the verbose
+# information for the sensors, elem 4 the used storcli commands.
+# @param LDDevicesToCheck LDs parsed by getLogicalDevices
+# @param LDInitToCheck LDs parsed by getLogicalDevices init
+# @param PDDevicesToCheck PDs parsed by getPhysicalDevices
+# @param PDInitToCheck PDs parsed by getPhysicalDevices init
+# @param PDRebuildToCheck PDs parsed by getPhysicalDevices rebuild
+# @return The created verbosity string
 sub getVerboseString{
 	my @statusLevel_a = @{(shift)};
 	my @LDDevicesToCheck = @{(shift)};
