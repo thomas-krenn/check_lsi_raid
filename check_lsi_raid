@@ -426,11 +426,14 @@ sub getLogicalDevices{
 	my $storcli = shift;
 	my @logDevices = @{(shift)};
 	my $action = shift;
+	my @commands = @{(shift)};
+
 	my $command = $storcli;
 	if(scalar(@logDevices) == 0) { $command .= "/vall"; }
 	elsif(scalar(@logDevices) == 1) { $command .= "/v$logDevices[0]"; }
 	else { $command .= "/v".join(",", @logDevices); }
 	$command .= " show $action";
+	push @commands, $command;
 	
 	my @output = `$command`;
 	my @foundDevs;
@@ -540,6 +543,7 @@ sub getPhysicalDevices{
 	my @enclosures = @{(shift)};
 	my @physDevices = @{(shift)};
 	my $action = shift;
+	my @commands = @{(shift)};
 
 	my $command = $storcli;
 	if(!$NOENCLOSURES){
@@ -550,6 +554,7 @@ sub getPhysicalDevices{
 	if(scalar(@physDevices) == 0) { $command .= "/sall"; }
 	elsif(scalar(@physDevices) == 1) { $command .= "/s$physDevices[0]"; }
 	else { $command .= "/s".join(",", @physDevices); }
+	push @commands, $command;
 
 	$command .= " show $action";
 	my @output = `$command`;
@@ -739,7 +744,10 @@ sub getPDStatus{
 sub getBBUStatus {
 	my $storcli = shift;
 	my @statusLevel_a = @{(shift)};
+	my @commands = @{(shift)};
+	
 	my $command = "$storcli /bbu show status";
+	push @commands, $command;
 
 	my $status;
 	my @output = `$command`;
@@ -891,7 +899,10 @@ sub getBBUStatus {
 sub getCVStatus {
 	my $storcli = shift;
 	my @statusLevel_a = @{(shift)};
+	my @commands = @{(shift)};
+	
 	my $command = "$storcli /cv show status";
+	push @commands, $command;
 
 	my $status;
 	my @output = `$command`;
@@ -1055,6 +1066,69 @@ sub getStatusString{
 	return $status_str;
 }
 
+sub getVerboseString{
+	my @statusLevel_a = @{(shift)};
+	my @LDDevicesToCheck = @{(shift)};
+	my @LDInitToCheck = @{(shift)};
+	my @PDDevicesToCheck = @{(shift)};
+	my @PDInitToCheck = @{(shift)};
+	my @PDRebuildToCheck = @{(shift)};
+	my @sensors_a;
+	my $verb_str;
+	
+	$verb_str .= 'Used storcli commands:\n';
+	foreach my $cmd (@{$statusLevel_a[4]}){
+		$verb_str .= '- '.$cmd.'\n';
+	}
+	if(${$statusLevel_a[0]} eq "Critical"){
+		$verb_str .= 'Critical sensors:\n';
+		foreach my $sensor (@{$statusLevel_a[2]}){
+			$verb_str .= '- '.$sensor.' ('.$statusLevel_a[3]->{$sensor}.')\n';
+		}
+		
+	}
+	if( ${$statusLevel_a[0]} eq "Warning"){
+		$verb_str .= 'Warning sensors:\n';
+		foreach my $sensor (@{$statusLevel_a[1]}){
+			$verb_str .= '- '.$sensor.' ('.$statusLevel_a[3]->{$sensor}.')\n';
+		}
+		
+	}
+	if($VERBOSITY == 3){
+		$verb_str .= 'LD information:\n';
+		foreach my $LD (@LDDevicesToCheck){
+			foreach my $key (sort (keys($LD))) {
+				$verb_str .= '- '.$key.'='.$LD->{$key}.'\n';
+			}
+		}
+		foreach my $LD (@LDInitToCheck){
+			foreach my $key (sort (keys($LD))) {
+				$verb_str .= '- '.$key.'='.$LD->{$key}.'\n';
+			}
+			
+		}
+		$verb_str .= 'PD information:\n';
+		foreach my $PD (@PDDevicesToCheck){
+			foreach my $key (sort (keys($PD))) {
+				$verb_str .= '- '.$key.'='.$PD->{$key}.'\n';
+			}
+		}
+		foreach my $PD (@PDInitToCheck){
+			foreach my $key (sort (keys($PD))) {
+				$verb_str .= '- '.$key.'='.$PD->{$key}.'\n';
+			}
+			
+		}
+		foreach my $PD (@PDRebuildToCheck){
+			foreach my $key (sort (keys($PD))) {
+				$verb_str .= '- '.$key.'='.$PD->{$key}.'\n';
+			}
+			
+		}
+	}
+	return $verb_str;
+}
+
 MAIN: {
 	my ($storcli, $sudo, $noSudo, $version, $exitCode);
 	# Create default sensor arrays and push them to status level
@@ -1063,10 +1137,12 @@ MAIN: {
 	my $warnings_a = [];
 	my $criticals_a = [];
 	my $verboseValues_h = {};
+	my $verboseCommands_a = [];
 	push @statusLevel_a, \$status_str;
 	push @statusLevel_a, $warnings_a;
 	push @statusLevel_a, $criticals_a;
 	push @statusLevel_a, $verboseValues_h;
+	push @statusLevel_a, $verboseCommands_a;
 	# Per default use a BBU
 	my $bbu = 1;
 	my @enclosures;
@@ -1166,11 +1242,11 @@ MAIN: {
 	if($bbuPresent == 1){getBBUStatus($storcli, \@statusLevel_a); }
 	if($cvPresent == 1){ getCVStatus($storcli, \@statusLevel_a); }
 	
-	my $LDDevicesToCheck = getLogicalDevices($storcli, \@logDevices, 'all');
-	my $LDInitToCheck = getLogicalDevices($storcli, \@logDevices, 'init');
-	my $PDDevicesToCheck = getPhysicalDevices($storcli, \@enclosures, \@physDevices, 'all');
-	my $PDInitToCheck = getPhysicalDevices($storcli, \@enclosures, \@physDevices, 'initialization');
-	my $PDRebuildToCheck = getPhysicalDevices($storcli, \@enclosures, \@physDevices, 'rebuild');
+	my $LDDevicesToCheck = getLogicalDevices($storcli, \@logDevices, 'all', $verboseCommands_a);
+	my $LDInitToCheck = getLogicalDevices($storcli, \@logDevices, 'init', $verboseCommands_a);
+	my $PDDevicesToCheck = getPhysicalDevices($storcli, \@enclosures, \@physDevices, 'all', $verboseCommands_a);
+	my $PDInitToCheck = getPhysicalDevices($storcli, \@enclosures, \@physDevices, 'initialization', $verboseCommands_a);
+	my $PDRebuildToCheck = getPhysicalDevices($storcli, \@enclosures, \@physDevices, 'rebuild', $verboseCommands_a);
 	
 	getLDStatus(\@statusLevel_a, $LDDevicesToCheck);
 	getLDStatus(\@statusLevel_a, $LDInitToCheck);
@@ -1181,7 +1257,10 @@ MAIN: {
 	print ${$statusLevel_a[0]}." ";
 	print getStatusString("Critical",\@statusLevel_a);
 	print getStatusString("Warning",\@statusLevel_a);
-
+	if($VERBOSITY == 2 || $VERBOSITY == 3){
+		print getVerboseString(\@statusLevel_a, $LDDevicesToCheck, $LDInitToCheck,
+		$PDDevicesToCheck, $PDInitToCheck, $PDRebuildToCheck)
+	}
 	$exitCode = STATE_OK;
 	if(${$statusLevel_a[0]} eq "Critical"){
 		$exitCode = STATE_CRITICAL;
