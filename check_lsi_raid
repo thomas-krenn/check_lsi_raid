@@ -426,14 +426,14 @@ sub getLogicalDevices{
 	my $storcli = shift;
 	my @logDevices = @{(shift)};
 	my $action = shift;
-	my @commands = @{(shift)};
+	my $commands_a = shift;
 
 	my $command = $storcli;
 	if(scalar(@logDevices) == 0) { $command .= "/vall"; }
 	elsif(scalar(@logDevices) == 1) { $command .= "/v$logDevices[0]"; }
 	else { $command .= "/v".join(",", @logDevices); }
 	$command .= " show $action";
-	push @commands, $command;
+	push $commands_a, $command;
 	
 	my @output = `$command`;
 	my @foundDevs;
@@ -543,7 +543,7 @@ sub getPhysicalDevices{
 	my @enclosures = @{(shift)};
 	my @physDevices = @{(shift)};
 	my $action = shift;
-	my @commands = @{(shift)};
+	my $commands_a = shift;
 
 	my $command = $storcli;
 	if(!$NOENCLOSURES){
@@ -554,7 +554,7 @@ sub getPhysicalDevices{
 	if(scalar(@physDevices) == 0) { $command .= "/sall"; }
 	elsif(scalar(@physDevices) == 1) { $command .= "/s$physDevices[0]"; }
 	else { $command .= "/s".join(",", @physDevices); }
-	push @commands, $command;
+	push $commands_a, $command;
 
 	$command .= " show $action";
 	my @output = `$command`;
@@ -744,10 +744,10 @@ sub getPDStatus{
 sub getBBUStatus {
 	my $storcli = shift;
 	my @statusLevel_a = @{(shift)};
-	my @commands = @{(shift)};
+	my $commands_a = shift;
 	
 	my $command = "$storcli /bbu show status";
-	push @commands, $command;
+	push $commands_a, $command;
 
 	my $status;
 	my @output = `$command`;
@@ -899,10 +899,10 @@ sub getBBUStatus {
 sub getCVStatus {
 	my $storcli = shift;
 	my @statusLevel_a = @{(shift)};
-	my @commands = @{(shift)};
+	my $commands_a = shift;
 	
 	my $command = "$storcli /cv show status";
-	push @commands, $command;
+	push $commands_a, $command;
 
 	my $status;
 	my @output = `$command`;
@@ -1076,54 +1076,61 @@ sub getVerboseString{
 	my @sensors_a;
 	my $verb_str;
 	
-	$verb_str .= 'Used storcli commands:\n';
+	$verb_str .= "Used storcli commands:\n";
 	foreach my $cmd (@{$statusLevel_a[4]}){
-		$verb_str .= '- '.$cmd.'\n';
+		$verb_str .= '- '.$cmd."\n";
 	}
-	if(${$statusLevel_a[0]} eq "Critical"){
-		$verb_str .= 'Critical sensors:\n';
+	if(${$statusLevel_a[0]} eq 'Critical'){
+		$verb_str .= "Critical sensors:\n";
 		foreach my $sensor (@{$statusLevel_a[2]}){
-			$verb_str .= '- '.$sensor.' ('.$statusLevel_a[3]->{$sensor}.')\n';
+			$verb_str .= "\t- ".$sensor;
+			if(exists($statusLevel_a[3]->{$sensor})){
+				$verb_str .= ' ('.$statusLevel_a[3]->{$sensor}.')';
+			}
+			$verb_str .= "\n";
 		}
 		
 	}
-	if( ${$statusLevel_a[0]} eq "Warning"){
-		$verb_str .= 'Warning sensors:\n';
+	if( ${$statusLevel_a[0]} ne 'OK'){
+		$verb_str .= "Warning sensors:\n";
 		foreach my $sensor (@{$statusLevel_a[1]}){
-			$verb_str .= '- '.$sensor.' ('.$statusLevel_a[3]->{$sensor}.')\n';
+			$verb_str .= "\t- ".$sensor;
+			if(exists($statusLevel_a[3]->{$sensor})){
+				$verb_str .= ' ('.$statusLevel_a[3]->{$sensor}.')';
+			}
+			$verb_str .= "\n";
 		}
 		
 	}
 	if($VERBOSITY == 3){
-		$verb_str .= 'LD information:\n';
+		$verb_str .= "LD information:\n";
 		foreach my $LD (@LDDevicesToCheck){
+			$verb_str .= "\t- ".$LD->{'ld'}.":\n";
 			foreach my $key (sort (keys($LD))) {
-				$verb_str .= '- '.$key.'='.$LD->{$key}.'\n';
+				$verb_str .= "\t\t- ".$key.'='.$LD->{$key}."\n";
+			}
+			foreach my $LDinit (@LDInitToCheck){
+				if($LDinit->{'ld'} eq $LD->{'ld'}){
+					$verb_str .= "\t\t- init=".$LDinit->{'init'}."\n";
+				}
 			}
 		}
-		foreach my $LD (@LDInitToCheck){
-			foreach my $key (sort (keys($LD))) {
-				$verb_str .= '- '.$key.'='.$LD->{$key}.'\n';
-			}
-			
-		}
-		$verb_str .= 'PD information:\n';
+		$verb_str .= "PD information:\n";
 		foreach my $PD (@PDDevicesToCheck){
+			$verb_str .= "\t- ".$PD->{'pd'}.":\n";
 			foreach my $key (sort (keys($PD))) {
-				$verb_str .= '- '.$key.'='.$PD->{$key}.'\n';
+				$verb_str .= "\t\t- ".$key.'='.$PD->{$key}."\n";
 			}
-		}
-		foreach my $PD (@PDInitToCheck){
-			foreach my $key (sort (keys($PD))) {
-				$verb_str .= '- '.$key.'='.$PD->{$key}.'\n';
+			foreach my $PDinit (@PDInitToCheck){
+				if($PDinit->{'pd'} eq $PD->{'pd'}){
+					$verb_str .= "\t\t- init=".$PDinit->{'init'}."\n";
+				}
 			}
-			
-		}
-		foreach my $PD (@PDRebuildToCheck){
-			foreach my $key (sort (keys($PD))) {
-				$verb_str .= '- '.$key.'='.$PD->{$key}.'\n';
+			foreach my $PDrebuild (@PDRebuildToCheck){
+				if($PDrebuild->{'pd'} eq $PD->{'pd'}){
+					$verb_str .= "\t\t- rebuild=".$PDrebuild->{'rebuild'}."\n";
+				}
 			}
-			
 		}
 	}
 	return $verb_str;
@@ -1239,8 +1246,8 @@ MAIN: {
 			$statusLevel_a[3]->{'CV_status'} = 'Critical';
 		}
 	}
-	if($bbuPresent == 1){getBBUStatus($storcli, \@statusLevel_a); }
-	if($cvPresent == 1){ getCVStatus($storcli, \@statusLevel_a); }
+	if($bbuPresent == 1){getBBUStatus($storcli, \@statusLevel_a, $verboseCommands_a); }
+	if($cvPresent == 1){ getCVStatus($storcli, \@statusLevel_a, $verboseCommands_a); }
 	
 	my $LDDevicesToCheck = getLogicalDevices($storcli, \@logDevices, 'all', $verboseCommands_a);
 	my $LDInitToCheck = getLogicalDevices($storcli, \@logDevices, 'init', $verboseCommands_a);
@@ -1258,7 +1265,7 @@ MAIN: {
 	print getStatusString("Critical",\@statusLevel_a);
 	print getStatusString("Warning",\@statusLevel_a);
 	if($VERBOSITY == 2 || $VERBOSITY == 3){
-		print getVerboseString(\@statusLevel_a, $LDDevicesToCheck, $LDInitToCheck,
+		print "\n".getVerboseString(\@statusLevel_a, $LDDevicesToCheck, $LDInitToCheck,
 		$PDDevicesToCheck, $PDInitToCheck, $PDRebuildToCheck)
 	}
 	$exitCode = STATE_OK;
