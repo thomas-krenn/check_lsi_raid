@@ -765,21 +765,21 @@ sub getBBUStatus {
 						$line =~ /([a-zA-Z]*)$/;
 							if($1 ne 'Optimal'){
 								$status = 'Warning';
-								push $statusLevel_a[1], 'Battery_state';
-								$statusLevel_a[3]->{'Battery_State'} = $1
+								push $statusLevel_a[1], 'BBU_State';
+								$statusLevel_a[3]->{'BBU_State'} = $1
 							}
 						}
 					elsif ($line =~ /^Temperature/){
 						$line =~ /([0-9]+) C$/;
 						if(!(checkThreshs($1, $BBU_TEMP_CRITICAL))){
 							$status = 'Critical';
-							push $statusLevel_a[2], 'Battery_temperature';
+							push $statusLevel_a[2], 'BBU_Temperature';
 						}
 						elsif(!(checkThreshs($1, $BBU_TEMP_WARNING))){
 							$status = 'Warning';
-							push $statusLevel_a[1], 'Battery_temperature';
+							push $statusLevel_a[1], 'BBU_Temperature';
 						}
-						$statusLevel_a[3]->{'Battery_temperature'} = $1;
+						$statusLevel_a[3]->{'BBU_Temperature'} = $1;
 					}
 				}
 				elsif($currBlock eq 'BBU_Firmware_Status'){
@@ -787,16 +787,16 @@ sub getBBUStatus {
 						$line =~ /([a-zA-Z]*)$/;
 						if($1 ne "OK") {
 							$status = 'Critical';
-							push $statusLevel_a[2],'BBU_firmware_temperature';
-							$statusLevel_a[3]->{'BBU_firmware_temperature'} = $1;
+							push $statusLevel_a[2],'BBU_Firmware_temperature';
+							$statusLevel_a[3]->{'BBU_Firmware_temperature'} = $1;
 						}
 					}
 					elsif($line =~ /^Voltage/){
 						$line =~ /([a-zA-Z]*)$/;
 						if($1 ne "OK") {
 							$status = 'Warning';
-							push $statusLevel_a[1],'BBU_voltage';
-							$statusLevel_a[3]->{'BBU_voltage'} = $1;
+							push $statusLevel_a[1],'BBU_Voltage';
+							$statusLevel_a[3]->{'BBU_Voltage'} = $1;
 						}
 					}
 					elsif($line =~ /^I2C Errors Detected/){
@@ -811,32 +811,32 @@ sub getBBUStatus {
 						$line =~ /([a-zA-Z]*)$/;
 						if($1 ne "No") {
 							$status = 'Critical';
-							push $statusLevel_a[2],'Battery_pack_missing';
-							$statusLevel_a[3]->{'Battery_pack_missing'} = $1;
+							push $statusLevel_a[2],'BBU_Pack_missing';
+							$statusLevel_a[3]->{'BBU_Pack_missing'} = $1;
 						}
 					}
 					elsif($line =~ /^Replacement required/){
 						$line =~ /([a-zA-Z]*)$/;
 						if($1 ne "No") {
 							$status = 'Critical';
-							push $statusLevel_a[2],'BBU_replacement_required';
-							$statusLevel_a[3]->{'BBU_replacement_required'} = $1;
+							push $statusLevel_a[2],'BBU_Replacement_required';
+							$statusLevel_a[3]->{'BBU_Replacement_required'} = $1;
 						}
 					}
 					elsif($line =~ /^Remaining Capacity Low/){
 						$line =~ /([a-zA-Z]*)$/;
 						if($1 ne "No") {
 							$status = 'Warning';
-							push $statusLevel_a[1],'BBU_remaining_capacity_low';
-							$statusLevel_a[3]->{'BBU_remaining_capacity_low'} = $1;
+							push $statusLevel_a[1],'BBU_Remaining_capacity_low';
+							$statusLevel_a[3]->{'BBU_Remaining_capacity_low'} = $1;
 						}
 					}
 					elsif($line =~ /^Pack is about to fail \& should be replaced/){
 						$line =~ /([a-zA-Z]*)$/;
 						if($1 ne "No") {
 							$status = 'Critical';
-							push $statusLevel_a[2],'BBU_should_be_replaced';
-							$statusLevel_a[3]->{'BBU_should_be_replaced'} = $1;
+							push $statusLevel_a[2],'BBU_Should_be_replaced';
+							$statusLevel_a[3]->{'BBU_Should_be_replaced'} = $1;
 						}
 					}
 				}
@@ -922,6 +922,7 @@ sub getCVStatus {
 						push $statusLevel_a[1], 'CV_State';
 						$statusLevel_a[3]->{'CV_State'} = $vals[1]
 					}
+				}
 				elsif($currBlock eq 'Cachevault_Info' && $line =~ /^Temperature/){
 					$line =~ /([0-9]+) C$/;
 					if(!(checkThreshs($1, $CV_TEMP_CRITICAL))){
