@@ -40,7 +40,7 @@ our $BBU_TEMP_WARNING = 50;
 our $BBU_TEMP_CRITICAL = 60;
 our $CV_TEMP_WARNING = 70;
 our $CV_TEMP_CRITICAL = 85;
-our ($IGNERR_M, $IGNERR_O, $IGNERR_P, $IGNERR_S) = (0, 0, 0, 0);
+our ($IGNERR_M, $IGNERR_O, $IGNERR_P, $IGNERR_S, $IGNERR_B) = (0, 0, 0, 0, 0);
 our $NOENCLOSURES = 0;
 our $CONTROLLER = 0;
 
@@ -118,6 +118,9 @@ sub displayUsage {
 	print "  [ -Is <count> | --ignore-shield-counter <count> ]
     Specifies the warning threshold for media errors per disk, the default
     threshold is $IGNERR_S.\n";
+    print "  [ -Ib <count> | --ignore-bbm-counter <count> ]
+    Specifies the warning threshold for bbm errors per disk, the default
+    threshold is $IGNERR_B.\n";
 	print "  [ -p <path> | --path <path>]
     Specifies the path to StorCLI, per default uses the tool 'which' to get 
     the StorCLI path.\n";
@@ -653,35 +656,35 @@ sub getPDStatus{
 			}
 		}
 		if(exists($PD->{'Shield Counter'})){
-			if($PD->{'Shield Counter'} > '0'){
+			if($PD->{'Shield Counter'} > $IGNERR_S){
 				$status = 'Warning';
 				push $statusLevel_a[1], $PD->{'pd'}.'_Shield_counter';
 				$statusLevel_a[3]->{$PD->{'pd'}.'_Shield_counter'} = $PD->{'Shield Counter'};
 			}
 		}
 		if(exists($PD->{'Media Error Count'})){
-			if($PD->{'Media Error Count'} > '0'){
+			if($PD->{'Media Error Count'} > $IGNERR_M){
 				$status = 'Warning';
 				push $statusLevel_a[1], $PD->{'pd'}.'_Media_error_count';
 				$statusLevel_a[3]->{$PD->{'pd'}.'_Media_error_count'} = $PD->{'Media Error Count'};
 			}
 		}
 		if(exists($PD->{'Other Error Count'})){
-			if($PD->{'Other Error Count'} > '0'){
+			if($PD->{'Other Error Count'} > $IGNERR_O){
 				$status = 'Warning';
 				push $statusLevel_a[1], $PD->{'pd'}.'_Other_error_count';
 				$statusLevel_a[3]->{$PD->{'pd'}.'_Other_error_count'} = $PD->{'Other Error Count'};
 			}
 		}
 		if(exists($PD->{'BBM Error Count'})){
-			if($PD->{'BBM Error Count'} > '0'){
+			if($PD->{'BBM Error Count'} > $IGNERR_B){
 				$status = 'Warning';
 				push $statusLevel_a[1], $PD->{'pd'}.'_BBM_error_count';
 				$statusLevel_a[3]->{$PD->{'pd'}.'_BBM_error_count'} = $PD->{'BBM Error Count'};
 			}
 		}
 		if(exists($PD->{'Predictive Failure Count'})){
-			if($PD->{'Predictive Failure Count'} > '0'){
+			if($PD->{'Predictive Failure Count'} > $IGNERR_P){
 				$status = 'Warning';
 				push $statusLevel_a[1], $PD->{'pd'}.'_Predictive_failure_count';
 				$statusLevel_a[3]->{$PD->{'pd'}.'_Predictive_failure_count'} = $PD->{'Predictive Failure Count'};
@@ -1234,6 +1237,7 @@ MAIN: {
 		'Io|ignore-other-errors=i' => \$IGNERR_O,
 		'Ip|ignore-predictive-fail-count=i' => \$IGNERR_P,
 		'Is|ignore-shield-counter=i' => \$IGNERR_S,
+		'Ib|ignore-bbm-counter=i' => \$IGNERR_B,
 		'p|path=s' => \$storcli,
 		'b|BBU=i' => \$bbu,
 		'noenclosures=i' => \$NOENCLOSURES,
