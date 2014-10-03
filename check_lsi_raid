@@ -519,7 +519,10 @@ sub getLDStatus{
 		else{
 			${$statusLevel_a[0]} = 'Critical';
 		}
-		$statusLevel_a[3]->{'LD_status'} = $status;
+		$statusLevel_a[3]->{'LD_Status'} = $status;
+	}
+	else{
+		$statusLevel_a[3]->{'LD_Status'} = 'OK';
 	}
 }
 
@@ -720,7 +723,10 @@ sub getPDStatus{
 		else{
 			${$statusLevel_a[0]} = 'Critical';
 		}
-		$statusLevel_a[3]->{'PD_status'} = $status;
+		$statusLevel_a[3]->{'PD_Status'} = $status;
+	}
+	else{
+		$statusLevel_a[3]->{'PD_Status'} = 'OK';
 	}
 }
 
@@ -862,8 +868,11 @@ sub getBBUStatus {
 				else{
 					${$statusLevel_a[0]} = 'Critical';
 				}
-				$statusLevel_a[3]->{'BBU_status'} = $status;
+				$statusLevel_a[3]->{'BBU_Status'} = $status;
 			}
+			else{
+				$statusLevel_a[3]->{'BBU_Status'} = 'OK';
+			}	
 		}
 	}
 	else {
@@ -920,7 +929,10 @@ sub getCVStatus {
 				else{
 					${$statusLevel_a[0]} = 'Critical';
 				}
-				$statusLevel_a[3]->{'CV_status'} = $status;
+				$statusLevel_a[3]->{'CV_Status'} = $status;
+			}
+			else{
+				$statusLevel_a[3]->{'CV_Status'} = 'OK';
 			}
 		}
 	}
@@ -998,6 +1010,28 @@ sub getStatusString{
 	if($level eq "Critical"){
 		@sensors_a = @{$statusLevel_a[2]};
 	}
+	# Check which parts where checked
+	my $parts = '';
+	my @keys = ('LD_Status','PD_Status','BBU_Status','CV_Status');
+	foreach my $key (@keys){
+		$key =~ /^([A-Z]+)\_.*$/;
+		my $part = $1;
+		if(${$statusLevel_a[0]} eq 'OK'){
+			if(exists($statusLevel_a[3]->{$key}) && $statusLevel_a[3]->{$key} eq 'OK'){
+				$parts .= ", " unless $parts eq '';
+				$parts .= $part;
+			}
+		}
+		else{
+			if(exists($statusLevel_a[3]->{$key}) && $statusLevel_a[3]->{$key} ne 'OK'){
+				$parts .= ", " unless $parts eq '';
+				$parts .= $part;
+			}
+		}
+	}
+	$status_str.= '(';
+	$status_str .= $parts unless !defined($parts);
+	$status_str.= ')';
 	if($level eq "Warning" || $level eq "Critical"){
 		if(@sensors_a){
 			# Print which sensors are Warn or Crit
