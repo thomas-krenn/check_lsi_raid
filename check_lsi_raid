@@ -699,13 +699,13 @@ sub getPDStatus{
 				$temp =~ /^([0-9]+)C/;
 				if(!(checkThreshs($1, $PD_TEMP_CRITICAL))){
 					$status = 'Critical';
-					push $statusLevel_a[2], $PD->{'pd'}.'_Drive_temp';
+					push $statusLevel_a[2], $PD->{'pd'}.'_Drive_Temperature';
 				}
 				elsif(!(checkThreshs($1, $PD_TEMP_WARNING))){
 					$status = 'Warning';
-					push $statusLevel_a[1], $PD->{'pd'}.'_Drive_temp';
+					push $statusLevel_a[1], $PD->{'pd'}.'_Drive_Temperature';
 				}
-				$statusLevel_a[3]->{$PD->{'pd'}.'_Drive_temp'} = $1;
+				$statusLevel_a[3]->{$PD->{'pd'}.'_Drive_Temperature'} = $1;
 			}
 		}
 		if(exists($PD->{'init'})){
@@ -1174,18 +1174,18 @@ sub getPerfString{
 	my %verboseValues_h = %{$statusLevel_a[3]};
 	my $perf_str;
 	foreach my $key (sort (keys(%verboseValues_h))){
-		$perf_str .= ' ' unless !defined($perf_str);
-		if($key eq 'BBU_Voltage' || $key =~ /temperature/i){
+		if($key =~ /temperature/i){
+			$perf_str .= ' ' unless !defined($perf_str);
 			$perf_str .= $key.'='.$verboseValues_h{$key};
 		}
 		if($key =~ /Drive_Temperature$/){
-			$perf_str .= $PD_TEMP_WARNING.';'.$PD_TEMP_CRITICAL.';';
+			$perf_str .= ';'.$PD_TEMP_WARNING.';'.$PD_TEMP_CRITICAL;
 		}
 		elsif($key eq 'BBU_Temperature'){
-			$perf_str .= $BBU_TEMP_WARNING.';'.$BBU_TEMP_CRITICAL.';';
+			$perf_str .= ';'.$BBU_TEMP_WARNING.';'.$BBU_TEMP_CRITICAL;
 		}
 		elsif($key eq 'CV_Temperature'){
-			$perf_str .= $CV_TEMP_WARNING.';'.$CV_TEMP_CRITICAL.';';
+			$perf_str .= ';'.$CV_TEMP_WARNING.';'.$CV_TEMP_CRITICAL;
 		}
 	}
 	return $perf_str;
