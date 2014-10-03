@@ -1135,7 +1135,7 @@ sub getVerboseString{
 		$verb_str .= "LD information:\n";
 		foreach my $LD (@LDDevicesToCheck){
 			$verb_str .= "\t- ".$LD->{'ld'}.":\n";
-			foreach my $key (sort (keys($LD))) {
+			foreach my $key (sort (keys($LD))){
 				$verb_str .= "\t\t- ".$key.'='.$LD->{$key}."\n";
 			}
 			foreach my $LDinit (@LDInitToCheck){
@@ -1147,7 +1147,7 @@ sub getVerboseString{
 		$verb_str .= "PD information:\n";
 		foreach my $PD (@PDDevicesToCheck){
 			$verb_str .= "\t- ".$PD->{'pd'}.":\n";
-			foreach my $key (sort (keys($PD))) {
+			foreach my $key (sort (keys($PD))){
 				$verb_str .= "\t\t- ".$key.'='.$PD->{$key}."\n";
 			}
 			foreach my $PDinit (@PDInitToCheck){
@@ -1163,6 +1163,32 @@ sub getVerboseString{
 		}
 	}
 	return $verb_str;
+}
+
+# Get the performance string for the current check. The values are taken from
+# the varbose hash in the status level array.
+# @param statusLevel_a The current status level array
+# @return The created performance string
+sub getPerfString{
+	my @statusLevel_a = @{(shift)};
+	my %verboseValues_h = %{$statusLevel_a[3]};
+	my $perf_str;
+	foreach my $key (sort (keys(%verboseValues_h))){
+		$perf_str .= ' ' unless !defined($perf_str);
+		if($key eq 'BBU_Voltage' || $key =~ /temperature/i){
+			$perf_str .= $key.'='.$verboseValues_h{$key};
+		}
+		if($key =~ /Drive_Temperature$/){
+			$perf_str .= $PD_TEMP_WARNING.';'.$PD_TEMP_CRITICAL.';';
+		}
+		elsif($key eq 'BBU_Temperature'){
+			$perf_str .= $BBU_TEMP_WARNING.';'.$BBU_TEMP_CRITICAL.';';
+		}
+		elsif($key eq 'CV_Temperature'){
+			$perf_str .= $CV_TEMP_WARNING.';'.$CV_TEMP_CRITICAL.';';
+		}
+	}
+	return $perf_str;
 }
 
 MAIN: {
@@ -1295,6 +1321,10 @@ MAIN: {
 	print ${$statusLevel_a[0]}." ";
 	print getStatusString("Critical",\@statusLevel_a);
 	print getStatusString("Warning",\@statusLevel_a);
+	my $perf_str = getPerfString(\@statusLevel_a);
+	if($perf_str){
+		print "|".$perf_str;
+	}
 	if($VERBOSITY == 2 || $VERBOSITY == 3){
 		print "\n".getVerboseString(\@statusLevel_a, $LDDevicesToCheck, $LDInitToCheck,
 		$PDDevicesToCheck, $PDInitToCheck, $PDRebuildToCheck)
