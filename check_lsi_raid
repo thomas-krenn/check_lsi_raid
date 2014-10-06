@@ -229,6 +229,89 @@ sub getControllerInfo{
 	return \%foundController_h;
 }
 
+# Checks the status of the raid controller
+# @param statusLevel_a The status level array, elem 0 is the current status,
+# elem 1 the warning sensors, elem 2 the critical sensors, elem 3 the verbose
+# information for the sensors.
+# @param foundController The hash of controller infos, created by getControllerInfo
+sub getControllerStatus{
+	my @statusLevel_a = @{(shift)};
+	my %foundController = %{(shift)};
+	my $status;
+	foreach my $key (%foundController){
+		if($key eq 'ROC temperature'){
+			$foundController{$key} =~ /^[-+]?[0-9]*\.?[0-9]+$/;
+			if(defined($1)){
+				if(!(checkThreshs($1, $C_TEMP_CRITICAL))){
+					$status = 'Critical';
+					push $statusLevel_a[2], 'ROC_Temperature';
+				}
+				elsif(!(checkThreshs($1, $C_TEMP_WARNING))){
+					$status = 'Warning';
+					push $statusLevel_a[1], 'ROC_Temperature';
+				}
+				$statusLevel_a[3]->{'ROC_Temperature'} = $1;
+			}
+		}
+		elsif($key eq 'Degraded'){
+			if($foundController{$key} != 0){
+				$status = 'Warning';
+				push $statusLevel_a[1], 'CTR_Degraded_drives';
+				$statusLevel_a[3]->{'CTR_Degraded_drives'} = $foundController{$key};
+			}
+		}
+		elsif($key eq 'Offline'){
+			if($foundController{$key} != 0){
+				$status = 'Warning';
+				push $statusLevel_a[1], 'CTR_Offline_drives';
+				$statusLevel_a[3]->{'CTR_Offline_drives'} = $foundController{$key};
+			}
+		}
+		elsif($key eq 'Critical Disks'){
+			if($foundController{$key} != 0){
+				$status = 'Critical';
+				push $statusLevel_a[2], 'CTR_Critical_disks';
+				$statusLevel_a[3]->{'CTR_Critical_disks'} = $foundController{$key};
+			}
+		}
+		elsif($key eq 'Failed Disks'){
+			if($foundController{$key} != 0){
+				$status = 'Critical';
+				push $statusLevel_a[2], 'CTR_Failed_disks';
+				$statusLevel_a[3]->{'CTR_Failed_disks'} = $foundController{$key};
+			}
+		}
+		elsif($key eq 'Memory Correctable Errors'){
+			if($foundController{$key} != 0){
+				$status = 'Warning';
+				push $statusLevel_a[1], 'CTR_Memory_correctable_errors';
+				$statusLevel_a[3]->{'CTR_Memory_correctable_errors'} = $foundController{$key};
+			}
+		}
+		elsif($key eq 'Memory Uncorrectable Errors'){
+			if($foundController{$key} != 0){
+				$status = 'Critical';
+				push $statusLevel_a[2], 'CTR_Memory_Uncorrectable_errors';
+				$statusLevel_a[3]->{'CTR_Memory_Uncorrectable_errors'} = $foundController{$key};
+			}
+		}
+	}
+	if(defined($status)){
+		if($status eq 'Warning'){
+			if(${$statusLevel_a[0]} ne 'Critical'){
+				${$statusLevel_a[0]} = 'Warning';
+			}
+		}
+		else{
+			${$statusLevel_a[0]} = 'Critical';
+		}
+		$statusLevel_a[3]->{'CTR_Status'} = $status;
+	}
+	else{
+		$statusLevel_a[3]->{'CTR_Status'} = 'OK';
+	}
+}
+
 # Checks which logical devices are present for the given controller and parses
 # the logical devices to a list of hashes. Each hash represents a logical device
 # with its values from the output.
@@ -1130,6 +1213,7 @@ MAIN: {
 	my $PDInitToCheck = getPhysicalDevices($storcli, \@enclosures, \@physDevices, 'initialization', $verboseCommands_a);
 	my $PDRebuildToCheck = getPhysicalDevices($storcli, \@enclosures, \@physDevices, 'rebuild', $verboseCommands_a);
 	
+	getControllerStatus(\@statusLevel_a, $controllerToCheck);
 	getLDStatus(\@statusLevel_a, $LDDevicesToCheck);
 	getLDStatus(\@statusLevel_a, $LDInitToCheck);
 	getPDStatus(\@statusLevel_a, $PDDevicesToCheck);
