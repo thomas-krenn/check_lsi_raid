@@ -943,7 +943,7 @@ sub getStatusString{
 	my $parts = '';
 	# level comes from the method call, not the real status level
 	if($level eq "Critical"){
-		my @keys = ('LD_Status','PD_Status','BBU_Status','CV_Status');
+		my @keys = ('CTR_Status','LD_Status','PD_Status','BBU_Status','CV_Status');
 		# Check which parts where checked
 		foreach my $key (@keys){
 			$key =~ /^([A-Z]+)\_.*$/;
@@ -996,6 +996,7 @@ sub getStatusString{
 # @return The created verbosity string
 sub getVerboseString{
 	my @statusLevel_a = @{(shift)};
+	my %controllerToCheck = %{(shift)};
 	my @LDDevicesToCheck = @{(shift)};
 	my @LDInitToCheck = @{(shift)};
 	my @PDDevicesToCheck = @{(shift)};
@@ -1031,6 +1032,15 @@ sub getVerboseString{
 		
 	}
 	if($VERBOSITY == 3){
+		$verb_str .= "CTR information:\n";
+		$verb_str .= "\t- ".$controllerToCheck{'Product Name'}.":\n";
+		$verb_str .= "\t\t- ".'Serial No ='.$controllerToCheck{'Serial No'}."\n";
+		$verb_str .= "\t\t- ".'FW Package Build ='.$controllerToCheck{'FW Package Build'}."\n";
+		$verb_str .= "\t\t- ".'Mfg. Date ='.$controllerToCheck{'Mfg. Date'}."\n";
+		$verb_str .= "\t\t- ".'Revision No ='.$controllerToCheck{'Revision No'}."\n";
+		$verb_str .= "\t\t- ".'BIOS Version ='.$controllerToCheck{'BIOS Version'}."\n";
+		$verb_str .= "\t\t- ".'FW Version ='.$controllerToCheck{'FW Version'}."\n";
+		$verb_str .= "\t\t- ".'ROC temperature ='.$controllerToCheck{'ROC temperature'}."\n";
 		$verb_str .= "LD information:\n";
 		foreach my $LD (@LDDevicesToCheck){
 			$verb_str .= "\t- ".$LD->{'ld'}.":\n";
@@ -1228,7 +1238,7 @@ MAIN: {
 		print "|".$perf_str;
 	}
 	if($VERBOSITY == 2 || $VERBOSITY == 3){
-		print "\n".getVerboseString(\@statusLevel_a, $LDDevicesToCheck, $LDInitToCheck,
+		print "\n".getVerboseString(\@statusLevel_a, $controllerToCheck, $LDDevicesToCheck, $LDInitToCheck,
 		$PDDevicesToCheck, $PDInitToCheck, $PDRebuildToCheck)
 	}
 	$exitCode = STATE_OK;
