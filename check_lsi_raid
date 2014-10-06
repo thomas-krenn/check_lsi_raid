@@ -203,7 +203,12 @@ sub getControllerTime{
 	return (checkCommandStatus(\@output));
 }
 
-#TODO Update doc of method
+# Get the status of the raid controller
+# @param storcli The path to storcli command utility, followed by the controller
+# number, e.g. 'storcli64 /c0'.
+# @param logDevices If given, a list of desired logical device numbers
+# @param commands_a An array to push the used command to
+# @return A hash, each key a value of the raid controller info
 sub getControllerInfo{
 	my $storcli = shift;
 	my $commands_a = shift;
@@ -240,7 +245,7 @@ sub getControllerStatus{
 	my $status;
 	foreach my $key (%foundController){
 		if($key eq 'ROC temperature'){
-			$foundController{$key} =~ /^[-+]?[0-9]*\.?[0-9]+$/;
+			$foundController{$key} =~ /^([0-9]+\.?[0-9]+).*$/;
 			if(defined($1)){
 				if(!(checkThreshs($1, $C_TEMP_CRITICAL))){
 					$status = 'Critical';
@@ -319,6 +324,7 @@ sub getControllerStatus{
 # number, e.g. 'storcli64 /c0'.
 # @param logDevices If given, a list of desired logical device numbers
 # @param action The storcli action to check, 'all' or 'init'
+# @param commands_a An array to push the used command to
 # @return A list of hashes, each hash is one logical device. Check ldmap_a for valid
 # hash keys.
 sub getLogicalDevices{
@@ -435,6 +441,7 @@ sub getLDStatus{
 # number, e.g. 'storcli64 /c0'.
 # @param physDevices If given, a list of desired physical device numbers
 # @param action The storcli action to check, 'all', 'initialization' or 'rebuild'
+# @param commands_a An array to push the used command to
 # @return A list of hashes, each hash is one physical device. Check pdmap_a for valid
 # hash keys.
 sub getPhysicalDevices{
@@ -640,6 +647,7 @@ sub getPDStatus{
 # @param statusLevel_a The status level array, elem 0 is the current status,
 # elem 1 the warning sensors, elem 2 the critical sensors, elem 3 the verbose
 # information for the sensors.
+# @param commands_a An array to push the used command to
 sub getBBUStatus {
 	my $storcli = shift;
 	my @statusLevel_a = @{(shift)};
@@ -795,6 +803,7 @@ sub getBBUStatus {
 # @param statusLevel_a The status level array, elem 0 is the current status,
 # elem 1 the warning sensors, elem 2 the critical sensors, elem 3 the verbose
 # information for the sensors.
+# @param commands_a An array to push the used command to
 sub getCVStatus {
 	my $storcli = shift;
 	my @statusLevel_a = @{(shift)};
@@ -988,6 +997,7 @@ sub getStatusString{
 # @param statusLevel_a The status level array, elem 0 is the current status,
 # elem 1 the warning sensors, elem 2 the critical sensors, elem 3 the verbose
 # information for the sensors, elem 4 the used storcli commands.
+# @param controllerToCheck Controller parsed by getControllerInfo
 # @param LDDevicesToCheck LDs parsed by getLogicalDevices
 # @param LDInitToCheck LDs parsed by getLogicalDevices init
 # @param PDDevicesToCheck PDs parsed by getPhysicalDevices
@@ -1034,13 +1044,13 @@ sub getVerboseString{
 	if($VERBOSITY == 3){
 		$verb_str .= "CTR information:\n";
 		$verb_str .= "\t- ".$controllerToCheck{'Product Name'}.":\n";
-		$verb_str .= "\t\t- ".'Serial No ='.$controllerToCheck{'Serial No'}."\n";
-		$verb_str .= "\t\t- ".'FW Package Build ='.$controllerToCheck{'FW Package Build'}."\n";
-		$verb_str .= "\t\t- ".'Mfg. Date ='.$controllerToCheck{'Mfg. Date'}."\n";
-		$verb_str .= "\t\t- ".'Revision No ='.$controllerToCheck{'Revision No'}."\n";
-		$verb_str .= "\t\t- ".'BIOS Version ='.$controllerToCheck{'BIOS Version'}."\n";
-		$verb_str .= "\t\t- ".'FW Version ='.$controllerToCheck{'FW Version'}."\n";
-		$verb_str .= "\t\t- ".'ROC temperature ='.$controllerToCheck{'ROC temperature'}."\n";
+		$verb_str .= "\t\t- ".'Serial No='.$controllerToCheck{'Serial No'}."\n";
+		$verb_str .= "\t\t- ".'FW Package Build='.$controllerToCheck{'FW Package Build'}."\n";
+		$verb_str .= "\t\t- ".'Mfg. Date='.$controllerToCheck{'Mfg. Date'}."\n";
+		$verb_str .= "\t\t- ".'Revision No='.$controllerToCheck{'Revision No'}."\n";
+		$verb_str .= "\t\t- ".'BIOS Version='.$controllerToCheck{'BIOS Version'}."\n";
+		$verb_str .= "\t\t- ".'FW Version='.$controllerToCheck{'FW Version'}."\n";
+		$verb_str .= "\t\t- ".'ROC temperature='.$controllerToCheck{'ROC temperature'}."\n";
 		$verb_str .= "LD information:\n";
 		foreach my $LD (@LDDevicesToCheck){
 			$verb_str .= "\t- ".$LD->{'ld'}.":\n";
@@ -1087,7 +1097,10 @@ sub getPerfString{
 			$perf_str .= ' ' unless !defined($perf_str);
 			$perf_str .= $key.'='.$verboseValues_h{$key};
 		}
-		if($key =~ /Drive_Temperature$/){
+		if($key =~ /ROC_Temperature$/){
+			$perf_str .= ';'.$C_TEMP_WARNING.';'.$C_TEMP_CRITICAL;
+		}
+		elsif($key =~ /Drive_Temperature$/){
 			$perf_str .= ';'.$PD_TEMP_WARNING.';'.$PD_TEMP_CRITICAL;
 		}
 		elsif($key eq 'BBU_Temperature'){
