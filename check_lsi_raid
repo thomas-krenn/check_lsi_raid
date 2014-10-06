@@ -1091,6 +1091,19 @@ sub getVerboseString{
 				}
 			}
 		}
+		my @keys = ('BBU_Status','CV_Status');
+		foreach my $key(@keys){
+			if(exists($statusLevel_a[3]->{$key})){
+				$key =~ /^(\w+)_\w+$/;
+				my $type = $1;
+				$verb_str .= $type." information:\n";
+				foreach my $stat (sort (keys($statusLevel_a[3]))){
+					if($stat =~ /^$type.+$/){
+						$verb_str .= "\t\t- $stat =".$statusLevel_a[3]->{$stat}."\n";
+					}
+				}
+			}
+		}
 	}
 	return $verb_str;
 }
