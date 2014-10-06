@@ -860,6 +860,7 @@ sub getCVStatus {
 						$status = 'Critical';
 						push $statusLevel_a[2],'CV_Replacement_required';
 					}
+					$statusLevel_a[3]->{'CV_Replacement_required'} = $1;
 				}
 			}
 			if(defined($status)){
@@ -1099,7 +1100,7 @@ sub getVerboseString{
 				$verb_str .= $type." information:\n";
 				foreach my $stat (sort (keys($statusLevel_a[3]))){
 					if($stat =~ /^$type.+$/){
-						$verb_str .= "\t\t- $stat =".$statusLevel_a[3]->{$stat}."\n";
+						$verb_str .= "\t\t- $stat=".$statusLevel_a[3]->{$stat}."\n";
 					}
 				}
 			}
