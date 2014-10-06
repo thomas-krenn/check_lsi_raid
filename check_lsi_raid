@@ -356,10 +356,10 @@ sub getLogicalDevices{
 					my @currmap;
 					if($line =~ /^DG\/VD TYPE.*/){
 						@splittedLine = split(' ', $line);
-						if(scalar(@splittedLine)== 8){
+						if(scalar(@splittedLine)== 9){
 							@currmap = @ldmap_a
 						}
-						if(scalar(@splittedLine)== 9){
+						if(scalar(@splittedLine)== 10){
 							@currmap = @ldmap_cc_a
 						}
 					}
