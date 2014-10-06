@@ -460,9 +460,9 @@ sub getPhysicalDevices{
 	if(scalar(@physDevices) == 0) { $command .= "/sall"; }
 	elsif(scalar(@physDevices) == 1) { $command .= "/s$physDevices[0]"; }
 	else { $command .= "/s".join(",", @physDevices); }
+	$command .= " show $action";
 	push $commands_a, $command;
 
-	$command .= " show $action";
 	my @output = `$command`;
 	my @foundDevs;
 	if(checkCommandStatus(\@output)) {
