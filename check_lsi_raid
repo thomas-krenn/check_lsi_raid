@@ -52,7 +52,8 @@ use constant {
  };
 
 # Header maps to parse logical and physical devices
-our @ldmap_a = ('DG/VD','TYPE','State','Access','Consist','Cache','Cac','sCC','Size');
+our @ldmap_a = ('DG/VD','TYPE','State','Access','Consist','Cache','sCC','Size');
+our @ldmap_cc_a = ('DG/VD','TYPE','State','Access','Consist','Cache','Cac','sCC','Size');
 our @pdmap_a = ('EID:Slt','DID','State','DG','Size','Intf','Med','SED','PI','SeSz','Model','Sp');
 
 # Print command line usage to stdout.
@@ -352,13 +353,23 @@ sub getLogicalDevices{
 					next;
 				}
 				if(defined($currBlock)){
+					my @currmap;
+					if($line =~ /^DG\/VD TYPE.*/){
+						@splittedLine = split(' ', $line);
+						if(scalar(@splittedLine)== 8){
+							@currmap = @ldmap_a
+						}
+						if(scalar(@splittedLine)== 9){
+							@currmap = @ldmap_cc_a
+						}
+					}
 					if($line =~ /^\d+\/\d+\s+\w+\d\s+\w+.*/){
 						@splittedLine = map { s/^\s*//; s/\s*$//; $_; } split(/\s+/,$line);
 						my %lineValues_h;
 						# The current block is the c0/v0 name
 						$lineValues_h{'ld'} = $currBlock;
-						for(my $i = 0; $i < @ldmap_a; $i++){
-								$lineValues_h{$ldmap_a[$i]} = $splittedLine[$i];
+						for(my $i = 0; $i < @currmap; $i++){
+								$lineValues_h{$currmap[$i]} = $splittedLine[$i];
 							}
 						push @foundDevs, \%lineValues_h;
 					}
