@@ -971,10 +971,10 @@ sub getStatusString{
 				}
 			}
 		}
+		$status_str.= '(';
+		$status_str .= $parts unless !defined($parts);
+		$status_str.= ')';
 	}
-	$status_str.= '(';
-	$status_str .= $parts unless !defined($parts);
-	$status_str.= ')';
 	$status_str.= ' ' unless !(@sensors_a);
 	if($level eq "Warning" || $level eq "Critical"){
 		if(@sensors_a){
