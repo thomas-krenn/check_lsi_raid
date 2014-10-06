@@ -209,8 +209,8 @@ sub getControllerInfo{
 	my $commands_a = shift;
 	my $command = '';
 
-	my $storcliPath =~ /^(.*)\/c[0-9]+/;
-	$command = $storcliPath.'adpallinfo a'.$CONTROLLER;
+	$storcli =~ /^(.*)\/c[0-9]+/;
+	$command = $1.'adpallinfo a'.$CONTROLLER;
 	push $commands_a, $command;
 	my @output = `$command`;
 	if($? >> 8 != 0){
