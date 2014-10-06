@@ -204,216 +204,29 @@ sub getControllerTime{
 }
 
 #TODO Update doc of method
-sub getControllerStatus {
-	my $sudo = $_[0];
-	my $storcli = $_[1];
-	my $controller = $_[2];
-	my @temperature_w = @{($_[3])};
-	my @temperature_c = @{($_[4])};
+sub getControllerInfo{
+	my $storcli = shift;
+	my $commands_a = shift;
+	my $command = '';
 
-	my $command = "$sudo $storcli /c$controller show all";
-	my $status = 0; # Return Status
-	my $statusMessage = ''; # Return String
-
+	my $storcliPath =~ /^(.*)\/c[0-9]+/;
+	$command = $storcliPath.'adpallinfo a'.$CONTROLLER;
+	push $commands_a, $command;
 	my @output = `$command`;
-
-	if(checkCommandStatus(\@output)) {
-		foreach my $line (@output) {
-			my $first;
-			my $last;
-			my $temp;
-			my $crit = 0;
-			if($line =~ /^([a-zA-Z0-9]*)/) {
-				$first = $1;
-				if($line =~ /([a-zA-Z0-9]*)$/) {
-					$last = $1;
-					if($first eq "Controller") {
-						if($line =~ /\s+([a-zA-Z0-9]*)/) {
-							if($1 eq "Status") {
-								if($last ne "OK" && $last ne "Optimal") {
-									$status = getExitState($status, STATE_WARNING);
-									$statusMessage .= "Ctrl. status not optimal, ";
-								}
-							}
-							elsif($1 eq "must") {
-								if($last ne "No") {
-									$status = getExitState($status, STATE_CRITICAL);
-									$statusMessage .= "Ctrl. needs reboot, ";
-								}
-							}
-							elsif($1 eq "has") {
-								if($last ne "No") {
-									$status = getExitState($status, STATE_WARNING);
-									$statusMessage .= "Ctrl. booted in safe mode, ";
-								}
-							}
-							elsif($1 eq "temperature") {
-								$temp = $last;
-								if($temperature_w[0] eq "in") {
-									if(($temp >= $temperature_w[1]) && ($temp <= $temperature_w[2])) {
-										# is in warn range, so also check if in critical error range
-										if($temperature_c[0] eq "in") {
-											if(($temp >= $temperature_c[1]) && ($temp <= $temperature_c[2])) {
-												# critical error
-												$crit = 1;
-												$status = getExitState($status, STATE_CRITICAL);
-												if ($VERBOSITY == 0) {$statusMessage .= "Ctrl. temp. critical, "; }
-												if ($VERBOSITY == 1) {$statusMessage .= "Ctrl. temp. is critical (${temp}C), "; }
-												if ($VERBOSITY >= 2) {$statusMessage .= "Controller temperature is critical (${temp}C), "; }
-											}
-										} else {
-											if(($temp < $temperature_c[1]) || ($temp > $temperature_c[2])) {
-												# critical error
-												$crit = 1;
-												$status = getExitState($status, STATE_CRITICAL);
-												if ($VERBOSITY == 0) {$statusMessage .= "Ctrl. temp. critical, "; }
-												if ($VERBOSITY == 1) {$statusMessage .= "Ctrl. temp. is critical (${temp}C), "; }
-												if ($VERBOSITY >= 2) {$statusMessage .= "Controller temperature is critical (${temp}C), "; }
-											}
-										}
-										if($crit eq 0) { # only warn if not already given a critical error
-											$status = getExitState($status, STATE_WARNING);
-											if ($VERBOSITY == 0) {$statusMessage .= "Ctrl. temp. warning, "; }
-											if ($VERBOSITY == 1) {$statusMessage .= "Ctrl. temp. warning (${temp}C), "; }
-											if ($VERBOSITY >= 2) {$statusMessage .= "Controller temperature warning (${temp}C), "; }
-										}
-									}
-								} else {
-									if(($temp < $temperature_w[1]) || ($temp > $temperature_w[2])) {
-										# is in warn range, so also check if in critical error range
-										if($temperature_c[0] eq "in") {
-											if(($temp >= $temperature_c[1]) && ($temp <= $temperature_c[2])) {
-												# critical error
-												$crit = 1;
-												$status = getExitState($status, STATE_CRITICAL);
-												if ($VERBOSITY == 0) {$statusMessage .= "Ctrl. temp. critical, "; }
-												if ($VERBOSITY == 1) {$statusMessage .= "Ctrl. temp. is critical (${temp}C), "; }
-												if ($VERBOSITY >= 2) {$statusMessage .= "Controller temperature is critical (${temp}C), "; }
-											}
-										} else {
-											if(($temp < $temperature_c[1]) || ($temp > $temperature_c[2])) {
-												# critical error
-												$crit = 1;
-												$status = getExitState($status, STATE_CRITICAL);
-												if ($VERBOSITY == 0) {$statusMessage .= "Ctrl. temp. critical, "; }
-												if ($VERBOSITY == 1) {$statusMessage .= "Ctrl. temp. is critical (${temp}C), "; }
-												if ($VERBOSITY >= 2) {$statusMessage .= "Controller temperature is critical (${temp}C), "; }
-											}
-										}
-										if($crit eq 0) { # only warn if not already given a critical error
-											$status = getExitState($status, STATE_WARNING);
-											if ($VERBOSITY == 0) {$statusMessage .= "Ctrl. temp. warning, "; }
-											if ($VERBOSITY == 1) {$statusMessage .= "Ctrl. temp. warning (${temp}C), "; }
-											if ($VERBOSITY >= 2) {$statusMessage .= "Controller temperature warning (${temp}C), "; }
-										}
-									}
-								}
-							}
-						}
-					}
-					elsif($first eq "ROC") {
-						if($line =~ /\s+([a-zA-Z0-9]*)/) {
-							if($1 eq "temperature") {
-								$temp = $last;
-								if($temperature_w[0] eq "in") {
-									if(($temp >= $temperature_w[1]) && ($temp <= $temperature_w[2])) {
-										# is in warn range, so also check if in critical error range
-										if($temperature_c[0] eq "in") {
-											if(($temp >= $temperature_c[1]) && ($temp <= $temperature_c[2])) {
-												# critical error
-												$crit = 1;
-												$status = getExitState($status, STATE_CRITICAL);
-												if ($VERBOSITY == 0) {$statusMessage .= "ROC temp. critical, "; }
-												if ($VERBOSITY == 1) {$statusMessage .= "ROC temp. is critical (${temp}C), "; }
-												if ($VERBOSITY >= 2) {$statusMessage .= "ROC temperature is critical (${temp}C), "; }
-											}
-										} else {
-											if(($temp < $temperature_c[1]) || ($temp > $temperature_c[2])) {
-												# critical error
-												$crit = 1;
-												$status = getExitState($status, STATE_CRITICAL);
-												if ($VERBOSITY == 0) {$statusMessage .= "ROC temp. critical, "; }
-												if ($VERBOSITY == 1) {$statusMessage .= "ROC temp. is critical (${temp}C), "; }
-												if ($VERBOSITY >= 2) {$statusMessage .= "ROC temperature is critical (${temp}C), "; }
-											}
-										}
-										if($crit eq 0) { # only warn if not already given a critical error
-											$status = getExitState($status, STATE_WARNING);
-											if ($VERBOSITY == 0) {$statusMessage .= "ROC temp. warning, "; }
-											if ($VERBOSITY == 1) {$statusMessage .= "ROC temp. warning (${temp}C), "; }
-											if ($VERBOSITY >= 2) {$statusMessage .= "ROC temperature warning (${temp}C), "; }
-										}
-									}
-								} else {
-									if(($temp < $temperature_w[1]) || ($temp > $temperature_w[2])) {
-										# is in warn range, so also check if in critical error range
-										if($temperature_c[0] eq "in") {
-											if(($temp >= $temperature_c[1]) && ($temp <= $temperature_c[2])) {
-												# critical error
-												$crit = 1;
-												$status = getExitState($status, STATE_CRITICAL);
-												if ($VERBOSITY == 0) {$statusMessage .= "ROC temp. critical, "; }
-												if ($VERBOSITY == 1) {$statusMessage .= "ROC temp. is critical (${temp}C), "; }
-												if ($VERBOSITY >= 2) {$statusMessage .= "ROC temperature is critical (${temp}C), "; }
-											}
-										} else {
-											if(($temp < $temperature_c[1]) || ($temp > $temperature_c[2])) {
-												# critical error
-												$crit = 1;
-												$status = getExitState($status, STATE_CRITICAL);
-												if ($VERBOSITY == 0) {$statusMessage .= "ROC temp. critical, "; }
-												if ($VERBOSITY == 1) {$statusMessage .= "ROC temp. is critical (${temp}C), "; }
-												if ($VERBOSITY >= 2) {$statusMessage .= "ROC temperature is critical (${temp}C), "; }
-											}
-										}
-										if($crit eq 0) { # only warn if not already given a critical error
-											$status = getExitState($status, STATE_WARNING);
-											if ($VERBOSITY == 0) {$statusMessage .= "ROC temp. warning, "; }
-											if ($VERBOSITY == 1) {$statusMessage .= "ROC temp. warning (${temp}C), "; }
-											if ($VERBOSITY >= 2) {$statusMessage .= "ROC temperature warning (${temp}C), "; }
-										}
-									}
-								}
-							}
-						}
-					}
-					elsif($first eq "Memory") {
-						if($line =~ /(\s+[a-zA-Z0-9]*)/) {
-							if($1 eq "Correctable") {
-								if($last ne "0") {
-									$status = getExitState($status, STATE_WARNING);
-									$statusMessage .= "Memory correctable errors detected, ";
-								}
-							}
-							elsif($1 eq "Uncorrectable") {
-								if($last ne "0") {
-									$status = getExitState($status, STATE_CRITICAL);
-									$statusMessage .= "Memory uncorrectable errors detected, ";
-								}
-							}
-						}
-					}
-					elsif($first eq "Failed") {
-						if($last ne "No") {
-							$status = getExitState($status, STATE_WARNING);
-							$statusMessage .= "Failed to get lock key on bootup, ";
-						}
-					}
-					#TODO Improve rollback detection
-					elsif($first eq "A") {
-						if($last ne "No") {
-							$status = getExitState($status, STATE_WARNING);
-							$statusMessage .= "A rollback operation is in progress, ";
-						}
-					}
-				}
-			}
-		}
-		return ($status, $statusMessage);
-	} else {
+	if($? >> 8 != 0){
 		print "Invalid StorCLI command! ($command)\n";
 		exit(STATE_UNKNOWN);
 	}
+	my %foundController_h;
+	foreach my $line(@output){
+		if($line =~ /\:/){
+			my @lineVals = split(':', $line);
+			$lineVals[0] =~ s/^\s+|\s+$//g;
+			$lineVals[1] =~ s/^\s+|\s+$//g;
+			$foundController_h{$lineVals[0]} = $lineVals[1];
+		}
+	}
+	return \%foundController_h;
 }
 
 # Checks which logical devices are present for the given controller and parses
@@ -1310,6 +1123,7 @@ MAIN: {
 	if($bbuPresent == 1){getBBUStatus($storcli, \@statusLevel_a, $verboseCommands_a); }
 	if($cvPresent == 1){ getCVStatus($storcli, \@statusLevel_a, $verboseCommands_a); }
 	
+	my $controllerToCheck = getControllerInfo($storcli, $verboseCommands_a);
 	my $LDDevicesToCheck = getLogicalDevices($storcli, \@logDevices, 'all', $verboseCommands_a);
 	my $LDInitToCheck = getLogicalDevices($storcli, \@logDevices, 'init', $verboseCommands_a);
 	my $PDDevicesToCheck = getPhysicalDevices($storcli, \@enclosures, \@physDevices, 'all', $verboseCommands_a);
