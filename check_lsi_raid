@@ -441,7 +441,9 @@ sub getLDStatus{
 		$statusLevel_a[3]->{'LD_Status'} = $status;
 	}
 	else{
-		$statusLevel_a[3]->{'LD_Status'} = 'OK';
+		if(!exists($statusLevel_a[3]->{'LD_Status'})){
+			$statusLevel_a[3]->{'LD_Status'} = 'OK';
+		}
 	}
 }
 
@@ -488,7 +490,8 @@ sub getPhysicalDevices{
 					next;
 				}
 				if(defined($currBlock)){
-					if($line =~ /^\d+\:\d+\s+\d+\s+\w+\s+\d+.*/){
+					# If a drive is not in a group, a - is at the DG column
+					if($line =~ /^\d+\:\d+\s+\d+\s+\w+\s+[0-9-]+.*/){
 						@splittedLine = map { s/^\s*//; s/\s*$//; $_; } split(/\s+/,$line);
 						# The current block is the c0/e252/s0 name
 						$line_ref->{'pd'} = $currBlock;
@@ -563,7 +566,7 @@ sub getPDStatus{
 	my $status;
 	foreach my $PD (@foundPDs){
 		if(exists($PD->{'State'})){
-			if($PD->{'State'} ne 'Onln'){
+			if($PD->{'State'} ne 'Onln' && $PD->{'State'} ne 'UGood'){
 				$status = 'Critical';
 				push $statusLevel_a[2], $PD->{'pd'}.'_State';
 				$statusLevel_a[3]->{$PD->{'pd'}.'_State'} = $PD->{'State'};
@@ -648,7 +651,9 @@ sub getPDStatus{
 		$statusLevel_a[3]->{'PD_Status'} = $status;
 	}
 	else{
-		$statusLevel_a[3]->{'PD_Status'} = 'OK';
+		if(!exists($statusLevel_a[3]->{'PD_Status'})){
+			$statusLevel_a[3]->{'PD_Status'} = 'OK';
+		}
 	}
 }
 
