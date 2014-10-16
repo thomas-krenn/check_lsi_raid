@@ -218,7 +218,7 @@ sub getControllerInfo{
 
 	$storcli =~ /^(.*)\/c[0-9]+/;
 	$command = $1.'adpallinfo a'.$CONTROLLER;
-	push $commands_a, $command;
+	push @{$commands_a}, $command;
 	my @output = `$command`;
 	if($? >> 8 != 0){
 		print "Invalid StorCLI command! ($command)\n";
@@ -251,11 +251,11 @@ sub getControllerStatus{
 			if(defined($1)){
 				if(!(checkThreshs($1, $C_TEMP_CRITICAL))){
 					$status = 'Critical';
-					push $statusLevel_a[2], 'ROC_Temperature';
+					push @{$statusLevel_a[2]}, 'ROC_Temperature';
 				}
 				elsif(!(checkThreshs($1, $C_TEMP_WARNING))){
 					$status = 'Warning';
-					push $statusLevel_a[1], 'ROC_Temperature';
+					push @{$statusLevel_a[1]}, 'ROC_Temperature';
 				}
 				$statusLevel_a[3]->{'ROC_Temperature'} = $1;
 			}
@@ -263,42 +263,42 @@ sub getControllerStatus{
 		elsif($key eq 'Degraded'){
 			if($foundController{$key} != 0){
 				$status = 'Warning';
-				push $statusLevel_a[1], 'CTR_Degraded_drives';
+				push @{$statusLevel_a[1]}, 'CTR_Degraded_drives';
 				$statusLevel_a[3]->{'CTR_Degraded_drives'} = $foundController{$key};
 			}
 		}
 		elsif($key eq 'Offline'){
 			if($foundController{$key} != 0){
 				$status = 'Warning';
-				push $statusLevel_a[1], 'CTR_Offline_drives';
+				push @{$statusLevel_a[1]}, 'CTR_Offline_drives';
 				$statusLevel_a[3]->{'CTR_Offline_drives'} = $foundController{$key};
 			}
 		}
 		elsif($key eq 'Critical Disks'){
 			if($foundController{$key} != 0){
 				$status = 'Critical';
-				push $statusLevel_a[2], 'CTR_Critical_disks';
+				push @{$statusLevel_a[2]}, 'CTR_Critical_disks';
 				$statusLevel_a[3]->{'CTR_Critical_disks'} = $foundController{$key};
 			}
 		}
 		elsif($key eq 'Failed Disks'){
 			if($foundController{$key} != 0){
 				$status = 'Critical';
-				push $statusLevel_a[2], 'CTR_Failed_disks';
+				push @{$statusLevel_a[2]}, 'CTR_Failed_disks';
 				$statusLevel_a[3]->{'CTR_Failed_disks'} = $foundController{$key};
 			}
 		}
 		elsif($key eq 'Memory Correctable Errors'){
 			if($foundController{$key} != 0){
 				$status = 'Warning';
-				push $statusLevel_a[1], 'CTR_Memory_correctable_errors';
+				push @{$statusLevel_a[1]}, 'CTR_Memory_correctable_errors';
 				$statusLevel_a[3]->{'CTR_Memory_correctable_errors'} = $foundController{$key};
 			}
 		}
 		elsif($key eq 'Memory Uncorrectable Errors'){
 			if($foundController{$key} != 0){
 				$status = 'Critical';
-				push $statusLevel_a[2], 'CTR_Memory_Uncorrectable_errors';
+				push @{$statusLevel_a[2]}, 'CTR_Memory_Uncorrectable_errors';
 				$statusLevel_a[3]->{'CTR_Memory_Uncorrectable_errors'} = $foundController{$key};
 			}
 		}
@@ -340,7 +340,7 @@ sub getLogicalDevices{
 	elsif(scalar(@logDevices) == 1) { $command .= "/v$logDevices[0]"; }
 	else { $command .= "/v".join(",", @logDevices); }
 	$command .= " show $action";
-	push $commands_a, $command;
+	push @{$commands_a}, $command;
 	
 	my @output = `$command`;
 	my @foundDevs;
@@ -412,20 +412,20 @@ sub getLDStatus{
 		if(exists($LD->{'State'})){
 			if($LD->{'State'} ne 'Optl'){
 				$status = 'Critical';
-				push $statusLevel_a[2], $LD->{'ld'}.'_State';
+				push @{$statusLevel_a[2]}, $LD->{'ld'}.'_State';
 				$statusLevel_a[3]->{$LD->{'ld'}.'_State'} = $LD->{'State'};
 			}
 		}
 		if(exists($LD->{'Consist'})){
 			if($LD->{'Consist'} ne 'Yes'){
 				$status = 'Warning';
-				push $statusLevel_a[1], $LD->{'ld'}.'_Consist';
+				push @{$statusLevel_a[1]}, $LD->{'ld'}.'_Consist';
 				$statusLevel_a[3]->{$LD->{'ld'}.'_Consist'} = $LD->{'Consist'};
 			}
 		}
 		if(exists($LD->{'init'})){
 			$status = 'Warning';
-			push $statusLevel_a[1], $LD->{'ld'}.'_Init';
+			push @{$statusLevel_a[1]}, $LD->{'ld'}.'_Init';
 			$statusLevel_a[3]->{$LD->{'ld'}.'_Init'} = $LD->{'init'};
 		}
 	}
@@ -474,7 +474,7 @@ sub getPhysicalDevices{
 	elsif(scalar(@physDevices) == 1) { $command .= "/s$physDevices[0]"; }
 	else { $command .= "/s".join(",", @physDevices); }
 	$command .= " show $action";
-	push $commands_a, $command;
+	push @{$commands_a}, $command;
 
 	my @output = `$command`;
 	my @foundDevs;
@@ -568,49 +568,49 @@ sub getPDStatus{
 		if(exists($PD->{'State'})){
 			if($PD->{'State'} ne 'Onln' && $PD->{'State'} ne 'UGood'){
 				$status = 'Critical';
-				push $statusLevel_a[2], $PD->{'pd'}.'_State';
+				push @{$statusLevel_a[2]}, $PD->{'pd'}.'_State';
 				$statusLevel_a[3]->{$PD->{'pd'}.'_State'} = $PD->{'State'};
 			}
 		}
 		if(exists($PD->{'Shield Counter'})){
 			if($PD->{'Shield Counter'} > $IGNERR_S){
 				$status = 'Warning';
-				push $statusLevel_a[1], $PD->{'pd'}.'_Shield_counter';
+				push @{$statusLevel_a[1]}, $PD->{'pd'}.'_Shield_counter';
 				$statusLevel_a[3]->{$PD->{'pd'}.'_Shield_counter'} = $PD->{'Shield Counter'};
 			}
 		}
 		if(exists($PD->{'Media Error Count'})){
 			if($PD->{'Media Error Count'} > $IGNERR_M){
 				$status = 'Warning';
-				push $statusLevel_a[1], $PD->{'pd'}.'_Media_error_count';
+				push @{$statusLevel_a[1]}, $PD->{'pd'}.'_Media_error_count';
 				$statusLevel_a[3]->{$PD->{'pd'}.'_Media_error_count'} = $PD->{'Media Error Count'};
 			}
 		}
 		if(exists($PD->{'Other Error Count'})){
 			if($PD->{'Other Error Count'} > $IGNERR_O){
 				$status = 'Warning';
-				push $statusLevel_a[1], $PD->{'pd'}.'_Other_error_count';
+				push @{$statusLevel_a[1]}, $PD->{'pd'}.'_Other_error_count';
 				$statusLevel_a[3]->{$PD->{'pd'}.'_Other_error_count'} = $PD->{'Other Error Count'};
 			}
 		}
 		if(exists($PD->{'BBM Error Count'})){
 			if($PD->{'BBM Error Count'} > $IGNERR_B){
 				$status = 'Warning';
-				push $statusLevel_a[1], $PD->{'pd'}.'_BBM_error_count';
+				push @{$statusLevel_a[1]}, $PD->{'pd'}.'_BBM_error_count';
 				$statusLevel_a[3]->{$PD->{'pd'}.'_BBM_error_count'} = $PD->{'BBM Error Count'};
 			}
 		}
 		if(exists($PD->{'Predictive Failure Count'})){
 			if($PD->{'Predictive Failure Count'} > $IGNERR_P){
 				$status = 'Warning';
-				push $statusLevel_a[1], $PD->{'pd'}.'_Predictive_failure_count';
+				push @{$statusLevel_a[1]}, $PD->{'pd'}.'_Predictive_failure_count';
 				$statusLevel_a[3]->{$PD->{'pd'}.'_Predictive_failure_count'} = $PD->{'Predictive Failure Count'};
 			}
 		}
 		if(exists($PD->{'S.M.A.R.T alert flagged by drive'})){
 			if($PD->{'S.M.A.R.T alert flagged by drive'} ne 'No'){
 				$status = 'Warning';
-				push $statusLevel_a[1], $PD->{'pd'}.'_SMART_flag';
+				push @{$statusLevel_a[1]}, $PD->{'pd'}.'_SMART_flag';
 			}
 		}
 		if(exists($PD->{'Drive Temperature'})){
@@ -619,23 +619,23 @@ sub getPDStatus{
 				$temp =~ /^([0-9]+)C/;
 				if(!(checkThreshs($1, $PD_TEMP_CRITICAL))){
 					$status = 'Critical';
-					push $statusLevel_a[2], $PD->{'pd'}.'_Drive_Temperature';
+					push @{$statusLevel_a[2]}, $PD->{'pd'}.'_Drive_Temperature';
 				}
 				elsif(!(checkThreshs($1, $PD_TEMP_WARNING))){
 					$status = 'Warning';
-					push $statusLevel_a[1], $PD->{'pd'}.'_Drive_Temperature';
+					push @{$statusLevel_a[1]}, $PD->{'pd'}.'_Drive_Temperature';
 				}
 				$statusLevel_a[3]->{$PD->{'pd'}.'_Drive_Temperature'} = $1;
 			}
 		}
 		if(exists($PD->{'init'})){
 			$status = 'Warning';
-			push $statusLevel_a[1], $PD->{'pd'}.'_Init';
+			push @{$statusLevel_a[1]}, $PD->{'pd'}.'_Init';
 			$statusLevel_a[3]->{$PD->{'pd'}.'_Init'} = $PD->{'init'};
 		}
 		if(exists($PD->{'rebuild'})){
 			$status = 'Warning';
-			push $statusLevel_a[1], $PD->{'pd'}.'_Rebuild';
+			push @{$statusLevel_a[1]}, $PD->{'pd'}.'_Rebuild';
 			$statusLevel_a[3]->{$PD->{'pd'}.'_Rebuild'} = $PD->{'rebuild'};
 		}
 	}
@@ -670,7 +670,7 @@ sub getBBUStatus {
 	my $commands_a = shift;
 	
 	my $command = "$storcli /bbu show status";
-	push $commands_a, $command;
+	push @{$commands_a}, $command;
 
 	my $status;
 	my @output = `$command`;
@@ -688,7 +688,7 @@ sub getBBUStatus {
 						$line =~ /([a-zA-Z]*)$/;
 							if($1 ne 'Optimal'){
 								$status = 'Warning';
-								push $statusLevel_a[1], 'BBU_State';
+								push @{$statusLevel_a[1]}, 'BBU_State';
 								$statusLevel_a[3]->{'BBU_State'} = $1
 							}
 						}
@@ -696,11 +696,11 @@ sub getBBUStatus {
 						$line =~ /([0-9]+) C$/;
 						if(!(checkThreshs($1, $BBU_TEMP_CRITICAL))){
 							$status = 'Critical';
-							push $statusLevel_a[2], 'BBU_Temperature';
+							push @{$statusLevel_a[2]}, 'BBU_Temperature';
 						}
 						elsif(!(checkThreshs($1, $BBU_TEMP_WARNING))){
 							$status = 'Warning';
-							push $statusLevel_a[1], 'BBU_Temperature';
+							push @{$statusLevel_a[1]}, 'BBU_Temperature';
 						}
 						$statusLevel_a[3]->{'BBU_Temperature'} = $1;
 					}
@@ -710,7 +710,7 @@ sub getBBUStatus {
 						$line =~ /([a-zA-Z]*)$/;
 						if($1 ne "OK") {
 							$status = 'Critical';
-							push $statusLevel_a[2],'BBU_Firmware_temperature';
+							push @{$statusLevel_a[2]},'BBU_Firmware_temperature';
 							$statusLevel_a[3]->{'BBU_Firmware_temperature'} = $1;
 						}
 					}
@@ -718,7 +718,7 @@ sub getBBUStatus {
 						$line =~ /([a-zA-Z]*)$/;
 						if($1 ne "OK") {
 							$status = 'Warning';
-							push $statusLevel_a[1],'BBU_Voltage';
+							push @{$statusLevel_a[1]},'BBU_Voltage';
 							$statusLevel_a[3]->{'BBU_Voltage'} = $1;
 						}
 					}
@@ -726,7 +726,7 @@ sub getBBUStatus {
 						$line =~ /([a-zA-Z]*)$/;
 						if($1 ne "No") {
 							$status = 'Critical';
-							push $statusLevel_a[2],'BBU_Firmware_I2C_errors';
+							push @{$statusLevel_a[2]},'BBU_Firmware_I2C_errors';
 							$statusLevel_a[3]->{'BBU_Firmware_I2C_Errors'} = $1;
 						}
 					}
@@ -734,7 +734,7 @@ sub getBBUStatus {
 						$line =~ /([a-zA-Z]*)$/;
 						if($1 ne "No") {
 							$status = 'Critical';
-							push $statusLevel_a[2],'BBU_Pack_missing';
+							push @{$statusLevel_a[2]},'BBU_Pack_missing';
 							$statusLevel_a[3]->{'BBU_Pack_missing'} = $1;
 						}
 					}
@@ -742,7 +742,7 @@ sub getBBUStatus {
 						$line =~ /([a-zA-Z]*)$/;
 						if($1 ne "No") {
 							$status = 'Critical';
-							push $statusLevel_a[2],'BBU_Replacement_required';
+							push @{$statusLevel_a[2]},'BBU_Replacement_required';
 							$statusLevel_a[3]->{'BBU_Replacement_required'} = $1;
 						}
 					}
@@ -750,7 +750,7 @@ sub getBBUStatus {
 						$line =~ /([a-zA-Z]*)$/;
 						if($1 ne "No") {
 							$status = 'Warning';
-							push $statusLevel_a[1],'BBU_Remaining_capacity_low';
+							push @{$statusLevel_a[1]},'BBU_Remaining_capacity_low';
 							$statusLevel_a[3]->{'BBU_Remaining_capacity_low'} = $1;
 						}
 					}
@@ -758,7 +758,7 @@ sub getBBUStatus {
 						$line =~ /([a-zA-Z]*)$/;
 						if($1 ne "No") {
 							$status = 'Critical';
-							push $statusLevel_a[2],'BBU_Should_be_replaced';
+							push @{$statusLevel_a[2]},'BBU_Should_be_replaced';
 							$statusLevel_a[3]->{'BBU_Should_be_replaced'} = $1;
 						}
 					}
@@ -768,7 +768,7 @@ sub getBBUStatus {
 						$line =~ /([a-zA-Z]*)$/;
 						if($1 ne "No") {
 							$status = 'Critical';
-							push $statusLevel_a[2],'BBU_GasGauge_discharged';
+							push @{$statusLevel_a[2]},'BBU_GasGauge_discharged';
 							$statusLevel_a[3]->{'BBU_GasGauge_discharged'} = $1;
 						}
 					}
@@ -776,7 +776,7 @@ sub getBBUStatus {
 						$line =~ /([a-zA-Z]*)$/;
 						if($1 ne "No") {
 							$status = 'Warning';
-							push $statusLevel_a[1],'BBU_GasGauge_over_temperature';
+							push @{$statusLevel_a[1]},'BBU_GasGauge_over_temperature';
 							$statusLevel_a[3]->{'BBU_GasGauge_over_temperature'} = $1;
 						}
 					}
@@ -784,7 +784,7 @@ sub getBBUStatus {
 						$line =~ /([a-zA-Z]*)$/;
 						if($1 ne "No") {
 							$status = 'Critical';
-							push $statusLevel_a[2],'BBU_GasGauge_over_charged';
+							push @{$statusLevel_a[2]},'BBU_GasGauge_over_charged';
 							$statusLevel_a[3]->{'BBU_GasGauge_over_charged'} = $1;
 						}
 					}
@@ -826,7 +826,7 @@ sub getCVStatus {
 	my $commands_a = shift;
 	
 	my $command = "$storcli /cv show status";
-	push $commands_a, $command;
+	push @{$commands_a}, $command;
 
 	my $status;
 	my @output = `$command`;
@@ -843,7 +843,7 @@ sub getCVStatus {
 					my @vals = split('\s{2,}',$line);
 					if($vals[1] ne "Optimal") {
 						$status = 'Warning';
-						push $statusLevel_a[1], 'CV_State';
+						push @{$statusLevel_a[1]}, 'CV_State';
 						$statusLevel_a[3]->{'CV_State'} = $vals[1]
 					}
 				}
@@ -851,11 +851,11 @@ sub getCVStatus {
 					$line =~ /([0-9]+) C$/;
 					if(!(checkThreshs($1, $CV_TEMP_CRITICAL))){
 						$status = 'Critical';
-						push $statusLevel_a[2], 'CV_Temperature';
+						push @{$statusLevel_a[2]}, 'CV_Temperature';
 					}
 					elsif(!(checkThreshs($1, $CV_TEMP_WARNING))){
 						$status = 'Warning';
-						push $statusLevel_a[1], 'CV_Temperature';
+						push @{$statusLevel_a[1]}, 'CV_Temperature';
 					}
 					$statusLevel_a[3]->{'CV_Temperature'} = $1;
 				}
@@ -863,7 +863,7 @@ sub getCVStatus {
 					$line =~ /([a-zA-Z0-9]*)$/;
 					if($1 ne "No") {
 						$status = 'Critical';
-						push $statusLevel_a[2],'CV_Replacement_required';
+						push @{$statusLevel_a[2]},'CV_Replacement_required';
 					}
 					$statusLevel_a[3]->{'CV_Replacement_required'} = $1;
 				}
@@ -1251,7 +1251,7 @@ MAIN: {
 		($bbuPresent,$cvPresent) = checkBBUorCVIsPresent($storcli);
 		if($bbuPresent == 0 && $cvPresent == 0){
 			$statusLevel_a[0] = 'Critical';
-			push $criticals_a, 'BBU/CV_Present';
+			push @{$criticals_a}, 'BBU/CV_Present';
 			$statusLevel_a[3]->{'BBU_Status'} = 'Critical';
 			$statusLevel_a[3]->{'CV_Status'} = 'Critical';
 		}
