@@ -5,11 +5,11 @@
 # Created as part of a semester project at the University of Applied Sciences Hagenberg
 # (http://www.fh-ooe.at/en/hagenberg-campus/)
 #
-# Copyright (c) 2013:
+# Copyright (c) 2013-2014:
+#   Georg Schoenberger  (gschoenberger@thomas-krenn.com)
 #   Grubhofer Martin    (s1110239013@students.fh-hagenberg.at)
 #   Scheipner Alexander (s1110239032@students.fh-hagenberg.at)
 #   Werner Sebastian    (s1110239038@students.fh-hagenberg.at)
-#   Georg Schoenberger  (gschoenberger@thomas-krenn.com)
 #   Jonas Meurer        (jmeurer@inet.de)
 #
 # This program is free software; you can redistribute it and/or modify it under
@@ -140,7 +140,7 @@ sub displayUsage {
 sub displayHelp {
 	print $NAME."\n";
 	print "Pulgin version: " . $VERSION ."\n";
-	print "Copyright (C) 2013 Thomas-Krenn.AG\n";
+	print "Copyright (C) 2013-2014 Thomas-Krenn.AG\n";
 	print "Current updates available at
     http://git.thomas-krenn.com/check_lsi_raid.git\n";
 	print "This Nagios/Icinga Plugin checks LSI RAID controllers for controller,
