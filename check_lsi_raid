@@ -1211,7 +1211,7 @@ MAIN: {
 		displayUsage();
 		exit(STATE_UNKNOWN);
 	}
-	if(defined($version)){ print $NAME . "\nVersion: ". $VERSION . "\n\n"; }
+	if(defined($version)){ print $NAME . "\nVersion: ". $VERSION . "\n"; }
 	# Check storcli tool
 	if(!defined($storcli)){
 		eval('use File::Which');
