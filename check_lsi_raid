@@ -617,6 +617,7 @@ sub getPDStatus{
 			if($PD->{'DG'} eq 'F'){
 				$status = 'Warning';
 				push @{$statusLevel_a[1]}, $PD->{'pd'}.'_DG';
+				$statusLevel_a[3]->{$PD->{'pd'}.'_DG'} = $PD->{'DG'};
 			}
 		}
 		if(exists($PD->{'Drive Temperature'})){
