@@ -154,7 +154,10 @@ user to your sudoers file (or create a new one in /etc/sudoers.d/).\n";
 Please send an email to the tk-monitoring plugin-user mailing list:
     tk-monitoring-plugins-user\@lists.thomas-krenn.com
 if you have questions regarding use of this software, to submit patches, or
-suggest improvements.\n";
+suggest improvements.\n
+Example usage:\n
+* check_lsi_raid -p /opt/MegaRAID/storcli/storcli64\n
+* check_lsi_raid -p /opt/MegaRAID/storcli/storcli64\n -C 1";
 	exit(STATE_OK);
 }
 
@@ -1227,6 +1230,7 @@ MAIN: {
 	}
 	if(!defined($storcli)){
 		print "Error: cannot find storcli executable.\n";
+		print "Ensure storcli is in your path, or use the '-p <storcli path>' switch!\n";
 		exit(STATE_UNKNOWN);
 	}
 	if($platform eq 'linux') {
