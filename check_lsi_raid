@@ -491,7 +491,7 @@ sub getPhysicalDevices{
 				}
 				if(defined($currBlock)){
 					# If a drive is not in a group, a - is at the DG column
-					if($line =~ /^\d+\:\d+\s+\d+\s+\w+\s+[0-9-]+.*/){
+					if($line =~ /^\d+\:\d+\s+\d+\s+\w+\s+[0-9-F]+.*/){
 						@splittedLine = map { s/^\s*//; s/\s*$//; $_; } split(/\s+/,$line);
 						# The current block is the c0/e252/s0 name
 						$line_ref->{'pd'} = $currBlock;
@@ -611,6 +611,12 @@ sub getPDStatus{
 			if($PD->{'S.M.A.R.T alert flagged by drive'} ne 'No'){
 				$status = 'Warning';
 				push @{$statusLevel_a[1]}, $PD->{'pd'}.'_SMART_flag';
+			}
+		}
+		if(exists($PD->{'DG'})){
+			if($PD->{'eq'} eq 'F'){
+				$status = 'Warning';
+				push @{$statusLevel_a[1]}, $PD->{'pd'}.'_DG';
 			}
 		}
 		if(exists($PD->{'Drive Temperature'})){
