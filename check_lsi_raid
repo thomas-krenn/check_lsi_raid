@@ -615,7 +615,7 @@ sub getPDStatus{
 		}
 		if(exists($PD->{'Drive Temperature'})){
 			my $temp = $PD->{'Drive Temperature'};
-			if($temp ne 'N/A'){
+			if($temp ne 'N/A' && $temp ne '0C (32.00 F)'){
 				$temp =~ /^([0-9]+)C/;
 				if(!(checkThreshs($1, $PD_TEMP_CRITICAL))){
 					$status = 'Critical';
