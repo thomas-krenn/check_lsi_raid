@@ -154,10 +154,10 @@ user to your sudoers file (or create a new one in /etc/sudoers.d/).\n";
 Please send an email to the tk-monitoring plugin-user mailing list:
     tk-monitoring-plugins-user\@lists.thomas-krenn.com
 if you have questions regarding use of this software, to submit patches, or
-suggest improvements.\n
-Example usage:\n
-* check_lsi_raid -p /opt/MegaRAID/storcli/storcli64\n
-* check_lsi_raid -p /opt/MegaRAID/storcli/storcli64\n -C 1";
+suggest improvements.
+Example usage:
+* check_lsi_raid -p /opt/MegaRAID/storcli/storcli64
+* check_lsi_raid -p /opt/MegaRAID/storcli/storcli64 -C 1\n";
 	exit(STATE_OK);
 }
 
