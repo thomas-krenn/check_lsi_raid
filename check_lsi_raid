@@ -169,7 +169,7 @@ sub displayVersion {
 	if(defined($storcli)){
 		my @storcliVersion = `$storcli -v`;
 		foreach my $line (@storcliVersion){
-			if($line =~ /^\s*Storage/) {
+			if($line =~ /^\s+StorCli.*/) {
 				$line =~ s/^\s+|\s+$//g;
 				print $line;
 			}
