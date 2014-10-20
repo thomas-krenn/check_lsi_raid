@@ -999,7 +999,12 @@ sub getStatusString{
 		$status_str .= $parts unless !defined($parts);
 		$status_str.= ')';
 	}
-	$status_str.= ' ' unless !(@sensors_a);
+	if($level eq 'Critical'){
+		$status_str.= ' ' unless !(@sensors_a);
+	}
+	if($level eq 'Warning' && !@{$statusLevel_a[2]}){
+		$status_str.= ' ' unless !(@sensors_a);
+	}
 	if($level eq "Warning" || $level eq "Critical"){
 		if(@sensors_a){
 			# Print which sensors are Warn or Crit
