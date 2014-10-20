@@ -22,7 +22,7 @@
  --------
 * The LSI RAID Monitoring Plugin is a Nagios/Icinga to check the LSI RAID
   Controller for warnings or critical errors.
-* It is written in Perl and uses the Storage Command Line Tool ("storcli")
+* It is written in Perl and uses the storage command line tool storcli to
   interact with the RAID Controller.
 
  Mailing List:
@@ -35,7 +35,7 @@
  ----------------
 * The current version of the check_lsi_raid plugin is available at the
   Thomas Krenn git-server:
-* http://git.thomas-krenn.com/check_lsi_raid.git
+  http://git.thomas-krenn.com/check_lsi_raid.git
 
  Further information:
  --------------------
@@ -104,7 +104,7 @@
 * libfile-which-perl
 * storcli
 
-Requirements:
+Requirements for Icinga/Nagios:
 -------------
 * On the system to be monitored:
 ** check_lsi_raid plugin
