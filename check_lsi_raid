@@ -614,7 +614,7 @@ sub getPDStatus{
 			}
 		}
 		if(exists($PD->{'DG'})){
-			if($PD->{'eq'} eq 'F'){
+			if($PD->{'DG'} eq 'F'){
 				$status = 'Warning';
 				push @{$statusLevel_a[1]}, $PD->{'pd'}.'_DG';
 			}
