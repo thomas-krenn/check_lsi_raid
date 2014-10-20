@@ -481,7 +481,7 @@ sub getPhysicalDevices{
 
 	my @output = `$command`;
 	my @foundDevs;
-	if(checkCommandStatus(\@output)) {
+	if(checkCommandStatus(\@output)){
 		if($action eq "all") {
 			my $currBlock;
 			my $line_ref;
@@ -554,6 +554,10 @@ sub getPhysicalDevices{
 				}
 			}
 		}
+	}
+	else {
+		print "Invalid StorCLI command! ($command)\n";
+		exit(STATE_UNKNOWN);
 	}
 	return \@foundDevs;
 }
