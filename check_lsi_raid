@@ -420,7 +420,7 @@ sub getLDStatus{
 			}
 		}
 		if(exists($LD->{'Consist'})){
-			if($LD->{'Consist'} ne 'Yes'){
+			if($LD->{'Consist'} ne 'Yes' && $LD->{'TYPE'} ne 'Cac1'){
 				$status = 'Warning';
 				push @{$statusLevel_a[1]}, $LD->{'ld'}.'_Consist';
 				$statusLevel_a[3]->{$LD->{'ld'}.'_Consist'} = $LD->{'Consist'};
