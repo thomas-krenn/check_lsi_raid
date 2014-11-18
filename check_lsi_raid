@@ -573,7 +573,7 @@ sub getPDStatus{
 	my $status;
 	foreach my $PD (@foundPDs){
 		if(exists($PD->{'State'})){
-			if($PD->{'State'} ne 'Onln' && $PD->{'State'} ne 'UGood'){
+			if($PD->{'State'} ne 'Onln' && $PD->{'State'} ne 'UGood' && $PD->{'State'} ne 'GHS'){
 				$status = 'Critical';
 				push @{$statusLevel_a[2]}, $PD->{'pd'}.'_State';
 				$statusLevel_a[3]->{$PD->{'pd'}.'_State'} = $PD->{'State'};
