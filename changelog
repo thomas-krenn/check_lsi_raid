@@ -3,6 +3,12 @@ Changelog for check_lsi_raid, a Nagios/Icinga plugin to check LSI RAID
 controllers
 ###############################################################################
 
+Version 2.1 20141120
+  * Various bug fixes
+    ** Allow state for global hot spare
+    ** Skip consistency check for cachecade volumes
+    ** Dereference status level
+
 Version 2.0 20141020
   * Completed refactoring of all check methods, the plugin now seperates
     value gathering and status checking.
