@@ -1091,7 +1091,7 @@ sub getVerboseString{
 		$verb_str .= "LD information:\n";
 		foreach my $LD (@LDDevicesToCheck){
 			$verb_str .= "\t- ".$LD->{'ld'}.":\n";
-			foreach my $key (sort (keys($LD))){
+			foreach my $key (sort (keys(%{$LD}))){
 				$verb_str .= "\t\t- ".$key.'='.$LD->{$key}."\n";
 			}
 			foreach my $LDinit (@LDInitToCheck){
@@ -1103,7 +1103,7 @@ sub getVerboseString{
 		$verb_str .= "PD information:\n";
 		foreach my $PD (@PDDevicesToCheck){
 			$verb_str .= "\t- ".$PD->{'pd'}.":\n";
-			foreach my $key (sort (keys($PD))){
+			foreach my $key (sort (keys(%{$PD}))){
 				$verb_str .= "\t\t- ".$key.'='.$PD->{$key}."\n";
 			}
 			foreach my $PDinit (@PDInitToCheck){
@@ -1123,7 +1123,7 @@ sub getVerboseString{
 				$key =~ /^(\w+)_\w+$/;
 				my $type = $1;
 				$verb_str .= $type." information:\n";
-				foreach my $stat (sort (keys($statusLevel_a[3]))){
+				foreach my $stat (sort (keys(%{$statusLevel_a[3]}))){
 					if($stat =~ /^$type.+$/){
 						$verb_str .= "\t\t- $stat=".$statusLevel_a[3]->{$stat}."\n";
 					}
