@@ -28,6 +28,7 @@
 use strict;
 use warnings;
 use Getopt::Long qw(:config no_ignore_case);
+use File::Which;
 
 our $VERBOSITY = 0;
 our $VERSION = "2.1";
@@ -1218,7 +1219,6 @@ MAIN: {
 	if(defined($version)){ print $NAME . "\nVersion: ". $VERSION . "\n"; }
 	# Check storcli tool
 	if(!defined($storcli)){
-		eval('use File::Which');
 		if($platform eq 'linux'){
 			$storcli = which('storcli');
 			if(!defined($storcli)){
