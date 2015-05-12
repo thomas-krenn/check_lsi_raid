@@ -162,8 +162,8 @@ Example usage:
 	exit(STATE_OK);
 }
 
-# Prints the name anmd the version of check_lsi_raid. If storcli is available,
-# the version if it is printed also.
+# Prints the name and the version of check_lsi_raid. If storcli is available,
+# the version of it is printed also.
 # @param storcli The path to storcli command utility
 sub displayVersion {
 	my $storcli = shift;
