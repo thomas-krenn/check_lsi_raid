@@ -3,7 +3,7 @@
 
  check_lsi_raid: Nagios/Icinga plugin to check LSI RAID Controllers
 
- Copyright (C) 2013-2014 Thomas-Krenn.AG
+ Copyright (C) 2013-2015 Thomas-Krenn.AG
 
  This program is free software; you can redistribute it and/or modify it under
  the terms of the GNU General Public License as published by the Free Software
@@ -104,8 +104,8 @@
 * libfile-which-perl
 * storcli
 
-Requirements for Icinga/Nagios:
--------------
+ Requirements for Icinga/Nagios:
+ -------------
 * On the system to be monitored:
 ** check_lsi_raid plugin
 ** storcli
