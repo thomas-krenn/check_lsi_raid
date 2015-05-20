@@ -134,7 +134,9 @@ sub displayUsage {
 	print "  [ --noenclosures <0/1> ]
     Specifies if enclosures are present or not. 0 means enclosures are
     present (default), 1 states no enclosures are used (no 'eall' in
-    storcli commands).\n"
+    storcli commands).\n";
+    print "  [--nosudo]
+    Turn off using sudo.\n";
 }
 
 # Displays a short Help text for the user
