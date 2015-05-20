@@ -1245,7 +1245,9 @@ MAIN: {
 				print "Error: cannot find sudo executable.\n";
 				exit(STATE_UNKNOWN);
 			}
-			$storcli = $sudo.' '.$storcli;
+			if($> != 0){
+				$storcli = $sudo.' '.$storcli;
+			}
 		}
 	}
 	# Print storcli version if available
