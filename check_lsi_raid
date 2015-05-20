@@ -159,7 +159,7 @@ suggest improvements.
 Example usage:
 * check_lsi_raid -p /opt/MegaRAID/storcli/storcli64
 * check_lsi_raid -p /opt/MegaRAID/storcli/storcli64 -C 1\n";
-	exit(STATE_OK);
+	exit(STATE_UNKNOWN);
 }
 
 # Prints the name and the version of check_lsi_raid. If storcli is available,
