@@ -1,9 +1,9 @@
 #!/usr/bin/perl -w
-# ======================================================================================
+# =============================================================================
 # check_lsi_raid: Nagios/Icinga plugin to check LSI Raid Controller status
-# --------------------------------------------------------------------------------------
-# Created as part of a semester project at the University of Applied Sciences Hagenberg
-# (http://www.fh-ooe.at/en/hagenberg-campus/)
+# -----------------------------------------------------------------------------
+# Created as part of a semester project at the University of Applied Sciences
+# Hagenberg (http://www.fh-ooe.at/en/hagenberg-campus/)
 #
 # Copyright (c) 2013-2014:
 #   Georg Schoenberger  (gschoenberger@thomas-krenn.com)
@@ -24,7 +24,7 @@
 #
 # You should have received a copy of the GNU General Public License along with
 # this program; if not, see <http://www.gnu.org/licenses/>.
-# ======================================================================================
+# ==============================================================================
 use strict;
 use warnings;
 use Getopt::Long qw(:config no_ignore_case);
