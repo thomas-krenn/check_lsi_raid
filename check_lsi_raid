@@ -72,7 +72,7 @@ sub displayUsage {
     For further information please visit:
         http://nagiosplug.sourceforge.net/developer-guidelines.html#AEN39\n";
 	print "  [ -V --version ]
-    Displays the plugin and, if available, the version if StorCLI.\n";
+    Displays the plugin and, if available, the version of StorCLI.\n";
 	print "  [ -C <num> | --controller <num> ]
     Specifies a controller number, defaults to 0.\n";
 	print "  [ -EID <ids> | --enclosure <ids> ]
