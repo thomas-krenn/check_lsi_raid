@@ -250,7 +250,7 @@ sub getControllerInfo{
 sub getControllerStatus{
 	my @statusLevel_a = @{(shift)};
 	my %foundController = %{(shift)};
-	my $status;
+	my $status = '';
 	foreach my $key (%foundController){
 		if($key eq 'ROC temperature'){
 			$foundController{$key} =~ /^([0-9]+\.?[0-9]+).*$/;
@@ -309,7 +309,7 @@ sub getControllerStatus{
 			}
 		}
 	}
-	if(defined($status)){
+	if($status ne ''){
 		if($status eq 'Warning'){
 			if(${$statusLevel_a[0]} ne 'Critical'){
 				${$statusLevel_a[0]} = 'Warning';
@@ -413,7 +413,7 @@ sub getLogicalDevices{
 sub getLDStatus{
 	my @statusLevel_a = @{(shift)};
 	my @foundLDs = @{(shift)};
-	my $status;
+	my $status = '';
 	foreach my $LD (@foundLDs){
 		if(exists($LD->{'State'})){
 			if($LD->{'State'} ne 'Optl'){
@@ -435,7 +435,7 @@ sub getLDStatus{
 			$statusLevel_a[3]->{$LD->{'ld'}.'_Init'} = $LD->{'init'};
 		}
 	}
-	if(defined($status)){
+	if($status ne ''){
 		if($status eq 'Warning'){
 			if(${$statusLevel_a[0]} ne 'Critical'){
 				${$statusLevel_a[0]} = 'Warning';
@@ -573,7 +573,7 @@ sub getPhysicalDevices{
 sub getPDStatus{
 	my @statusLevel_a = @{(shift)};
 	my @foundPDs = @{(shift)};
-	my $status;
+	my $status = '';
 	foreach my $PD (@foundPDs){
 		if(exists($PD->{'State'})){
 			if($PD->{'State'} ne 'Onln' && $PD->{'State'} ne 'UGood' && $PD->{'State'} ne 'GHS' && $PD->{'State'} ne 'DHS'){
@@ -656,7 +656,7 @@ sub getPDStatus{
 			$statusLevel_a[3]->{$PD->{'pd'}.'_Rebuild'} = $PD->{'rebuild'};
 		}
 	}
-	if(defined($status)){
+	if($status ne ''){
 		if($status eq 'Warning'){
 			if(${$statusLevel_a[0]} ne 'Critical'){
 				${$statusLevel_a[0]} = 'Warning';
@@ -689,7 +689,7 @@ sub getBBUStatus {
 	my $command = "$storcli /bbu show status";
 	push @{$commands_a}, $command;
 
-	my $status;
+	my $status = '';
 	my @output = `$command`;
 	if(checkCommandStatus(\@output)) {
 		my $currBlock;
@@ -807,7 +807,7 @@ sub getBBUStatus {
 					}
 				}
 			}
-			if(defined($status)){
+			if($status ne ''){
 				if($status eq 'Warning'){
 					if(${$statusLevel_a[0]} ne 'Critical'){
 						${$statusLevel_a[0]} = 'Warning';
@@ -845,7 +845,7 @@ sub getCVStatus {
 	my $command = "$storcli /cv show status";
 	push @{$commands_a}, $command;
 
-	my $status;
+	my $status = '';
 	my @output = `$command`;
 	if(checkCommandStatus(\@output)) {
 		my $currBlock;
@@ -885,7 +885,7 @@ sub getCVStatus {
 					$statusLevel_a[3]->{'CV_Replacement_required'} = $1;
 				}
 			}
-			if(defined($status)){
+			if($status ne ''){
 				if($status eq 'Warning'){
 					if(${$statusLevel_a[0]} ne 'Critical'){
 						${$statusLevel_a[0]} = 'Warning';
