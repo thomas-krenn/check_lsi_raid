@@ -105,7 +105,7 @@
 * storcli
 
  Requirements for Icinga/Nagios:
- -------------
+ -------------------------------
 * On the system to be monitored:
 ** check_lsi_raid plugin
 ** storcli
