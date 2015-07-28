@@ -135,8 +135,10 @@ sub displayUsage {
     Specifies if enclosures are present or not. 0 means enclosures are
     present (default), 1 states no enclosures are used (no 'eall' in
     storcli commands).\n";
-    print "  [--nosudo]
+    print "  [ --nosudo ]
     Turn off using sudo.\n";
+    print "  [ --nocleanlogs ]
+    Do not clean storcli logs after running storcli commands.\n";
 }
 
 # Displays a short Help text for the user
@@ -1166,7 +1168,7 @@ sub getPerfString{
 }
 
 MAIN: {
-	my ($storcli, $sudo, $noSudo, $version, $exitCode);
+	my ($storcli, $sudo, $noSudo, $noCleanlogs, $version, $exitCode);
 	# Create default sensor arrays and push them to status level
 	my @statusLevel_a ;
 	my $status_str = 'OK';
@@ -1213,6 +1215,7 @@ MAIN: {
 		'b|BBU=i' => \$bbu,
 		'noenclosures=i' => \$NOENCLOSURES,
 		'nosudo' => \$noSudo,
+		'nocleanlogs' => \$noCleanlogs	
 	))){
 		print $NAME . " Version: " . $VERSION ."\n";
 		displayUsage();
@@ -1296,6 +1299,13 @@ MAIN: {
 	getPDStatus(\@statusLevel_a, $PDDevicesToCheck);
 	getPDStatus(\@statusLevel_a, $PDInitToCheck);
 	getPDStatus(\@statusLevel_a, $PDRebuildToCheck);
+
+	# If desired, clean up the logs created by storcli
+	# This is done per default
+	if(!defined($noCleanlogs)){
+		if(-f 'MegaSAS.log'){ unlink 'MegaSAS.log'}
+		if(-f 'CmdTool.log'){ unlink 'CmdTool.log'}
+	}
 
 	print ${$statusLevel_a[0]}." ";
 	print getStatusString("Critical",\@statusLevel_a);
