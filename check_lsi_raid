@@ -1224,7 +1224,7 @@ MAIN: {
 	if(defined($version)){ print $NAME . "\nVersion: ". $VERSION . "\n"; }
 	# Check storcli tool
 	if(!defined($storcli)){
-		if($platform eq 'linux'){
+		if($platform eq 'linux' || $platform eq 'solaris'){
 			$storcli = which('storcli');
 			if(!defined($storcli)){
 				$storcli = which('storcli64');
@@ -1242,7 +1242,7 @@ MAIN: {
 		print "Ensure storcli is in your path, or use the '-p <storcli path>' switch!\n";
 		exit(STATE_UNKNOWN);
 	}
-	if($platform eq 'linux') {
+	if($platform eq 'linux' || $platform eq 'solaris') {
 		if(!defined($noSudo)){
 			my $sudo;
 			chomp($sudo = `which sudo`);
