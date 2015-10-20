@@ -35,7 +35,7 @@
  ----------------
 * The current version of the check_lsi_raid plugin is available at the
   Thomas Krenn git-server:
-  http://git.thomas-krenn.com/check_lsi_raid.git
+  https://github.com/thomas-krenn/check_lsi_raid.git
 
  Further information:
  --------------------

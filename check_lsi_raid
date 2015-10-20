@@ -147,7 +147,7 @@ sub displayHelp {
 	print "Pulgin version: " . $VERSION ."\n";
 	print "Copyright (C) 2013-2015 Thomas-Krenn.AG\n";
 	print "Current updates available at
-    http://git.thomas-krenn.com/check_lsi_raid.git\n";
+    https://github.com/thomas-krenn/check_lsi_raid.git\n";
 	print "This Nagios/Icinga Plugin checks LSI RAID controllers for controller,
 physical device, logical device, BBU and CV warnings and errors.\n";
 	print "In order for this plugin to work properly you need to add the nagios
