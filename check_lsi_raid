@@ -561,6 +561,10 @@ sub getPhysicalDevices{
 		}
 	}
 	else {
+		if(grep { /No drive _found/i } @output){
+			print "Warning (CTR Warn) [No storage attached] ($command)\n";
+			exit(STATE_WARNING);
+		}
 		print "Invalid StorCLI command! ($command)\n";
 		exit(STATE_UNKNOWN);
 	}
