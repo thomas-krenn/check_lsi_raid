@@ -561,7 +561,7 @@ sub getPhysicalDevices{
 		}
 	}
 	else {
-		if(grep { /No drive _found/i } @output){
+		if(grep { /No drive found/i } @output){
 			print "Warning (CTR Warn) [No storage attached] ($command)\n";
 			exit(STATE_WARNING);
 		}
