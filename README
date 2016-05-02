@@ -25,12 +25,6 @@
 * It is written in Perl and uses the storage command line tool storcli to
   interact with the RAID Controller.
 
- Mailing List:
- -------------
-* tk-monitoring-plugins-user@lists.thomas-krenn.com
-* Archive:
-  http://lists.thomas-krenn.com/pipermail/tk-monitoring-plugins-user/
-
  Current Version:
  ----------------
 * The current version of the check_lsi_raid plugin is available at the
