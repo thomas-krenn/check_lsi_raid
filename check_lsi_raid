@@ -31,7 +31,7 @@ use Getopt::Long qw(:config no_ignore_case);
 use File::Which;
 
 our $VERBOSITY = 0;
-our $VERSION = "2.3";
+our $VERSION = "2.4";
 our $NAME = "check_lsi_raid: Nagios/Icinga plugin to check LSI Raid Controller status";
 our $C_TEMP_WARNING = 80;
 our $C_TEMP_CRITICAL = 90;
@@ -98,16 +98,16 @@ sub displayUsage {
     Specifies the disk temperature critical threshold, the default threshold
     is ${PD_TEMP_CRITICAL}C.\n";
 	print "  [ -BBUTw <temp> | --bbutemperature-warning <temp> ]
-    Specifies the BBU temperature warning threshold, default threshold 
+    Specifies the BBU temperature warning threshold, default threshold
     is ${BBU_TEMP_WARNING}C.\n";
 	print "  [ -BBUTc <temp> | --bbutemperature-critical <temp> ]
-    Specifies the BBU temperature critical threshold, default threshold 
+    Specifies the BBU temperature critical threshold, default threshold
     is ${BBU_TEMP_CRITICAL}C.\n";
     print "  [ -CVTw <temp> | --cvtemperature-warning <temp> ]
-    Specifies the CV temperature warning threshold, default threshold 
+    Specifies the CV temperature warning threshold, default threshold
     is ${CV_TEMP_WARNING}C.\n";
     print "  [ -CVTc <temp> | --cvtemperature-critical <temp> ]
-    Specifies the CV temperature critical threshold, default threshold 
+    Specifies the CV temperature critical threshold, default threshold
     is ${CV_TEMP_CRITICAL}C.\n";
 	print "  [ -Im <count> | --ignore-media-errors <count> ]
     Specifies the warning threshold for media errors per disk, the default
@@ -125,7 +125,7 @@ sub displayUsage {
     Specifies the warning threshold for bbm errors per disk, the default
     threshold is $IGNERR_B.\n";
 	print "  [ -p <path> | --path <path>]
-    Specifies the path to StorCLI, per default uses the tool 'which' to get 
+    Specifies the path to StorCLI, per default uses the tool 'which' to get
     the StorCLI path.\n";
 	print "  [ -b <0/1> | --BBU <0/1> ]
     Check if a BBU or a CacheVault module is present. One must be present unless
@@ -349,7 +349,7 @@ sub getLogicalDevices{
 	else { $command .= "/v".join(",", @logDevices); }
 	$command .= " show $action";
 	push @{$commands_a}, $command;
-	
+
 	my @output = `$command`;
 	my @foundDevs;
 	if(checkCommandStatus(\@output)) {
@@ -691,7 +691,7 @@ sub getBBUStatus {
 	my $storcli = shift;
 	my @statusLevel_a = @{(shift)};
 	my $commands_a = shift;
-	
+
 	my $command = "$storcli /bbu show status";
 	push @{$commands_a}, $command;
 
@@ -826,7 +826,7 @@ sub getBBUStatus {
 			}
 			else{
 				$statusLevel_a[3]->{'BBU_Status'} = 'OK';
-			}	
+			}
 		}
 	}
 	else {
@@ -847,7 +847,7 @@ sub getCVStatus {
 	my $storcli = shift;
 	my @statusLevel_a = @{(shift)};
 	my $commands_a = shift;
-	
+
 	my $command = "$storcli /cv show status";
 	push @{$commands_a}, $command;
 
@@ -1059,7 +1059,7 @@ sub getVerboseString{
 	my @PDRebuildToCheck = @{(shift)};
 	my @sensors_a;
 	my $verb_str;
-	
+
 	$verb_str .= "Used storcli commands:\n";
 	foreach my $cmd (@{$statusLevel_a[4]}){
 		$verb_str .= '- '.$cmd."\n";
@@ -1073,7 +1073,7 @@ sub getVerboseString{
 			}
 			$verb_str .= "\n";
 		}
-		
+
 	}
 	if( ${$statusLevel_a[0]} ne 'OK'){
 		$verb_str .= "Warning sensors:\n";
@@ -1084,7 +1084,7 @@ sub getVerboseString{
 			}
 			$verb_str .= "\n";
 		}
-		
+
 	}
 	if($VERBOSITY == 3){
 		$verb_str .= "CTR information:\n";
@@ -1219,7 +1219,7 @@ MAIN: {
 		'b|BBU=i' => \$bbu,
 		'noenclosures=i' => \$NOENCLOSURES,
 		'nosudo' => \$noSudo,
-		'nocleanlogs' => \$noCleanlogs	
+		'nocleanlogs' => \$noCleanlogs
 	))){
 		print $NAME . " Version: " . $VERSION ."\n";
 		displayUsage();
@@ -1289,14 +1289,14 @@ MAIN: {
 	}
 	if($bbuPresent == 1){getBBUStatus($storcli, \@statusLevel_a, $verboseCommands_a); }
 	if($cvPresent == 1){ getCVStatus($storcli, \@statusLevel_a, $verboseCommands_a); }
-	
+
 	my $controllerToCheck = getControllerInfo($storcli, $verboseCommands_a);
 	my $LDDevicesToCheck = getLogicalDevices($storcli, \@logDevices, 'all', $verboseCommands_a);
 	my $LDInitToCheck = getLogicalDevices($storcli, \@logDevices, 'init', $verboseCommands_a);
 	my $PDDevicesToCheck = getPhysicalDevices($storcli, \@enclosures, \@physDevices, 'all', $verboseCommands_a);
 	my $PDInitToCheck = getPhysicalDevices($storcli, \@enclosures, \@physDevices, 'initialization', $verboseCommands_a);
 	my $PDRebuildToCheck = getPhysicalDevices($storcli, \@enclosures, \@physDevices, 'rebuild', $verboseCommands_a);
-	
+
 	getControllerStatus(\@statusLevel_a, $controllerToCheck);
 	getLDStatus(\@statusLevel_a, $LDDevicesToCheck);
 	getLDStatus(\@statusLevel_a, $LDInitToCheck);

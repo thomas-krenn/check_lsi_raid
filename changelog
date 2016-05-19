@@ -3,6 +3,10 @@ Changelog for check_lsi_raid, a Nagios/Icinga plugin to check LSI RAID
 controllers
 ###############################################################################
 
+Version 2.4 20160519
+  * Exit with warning if no storage is attached to controller
+  * Add JBOD to valid states (THX to ddesmet)
+
 Version 2.3 20151020
   * Check for solaris in linux code path
   * Remove storcli logs per default, as a log is created on each plugin call
