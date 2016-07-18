@@ -195,6 +195,10 @@ sub checkCommandStatus{
 			if($line eq "Status = Success\n"){
 				return 1;
 			}
+			elsif (grep { /Failure\s+46/i } @output){
+				# Return 46 means a drive is not attached, this is a valid failure
+				return 1;
+			}
 			else{
 				return 0;
 			}
@@ -559,6 +563,15 @@ sub getPhysicalDevices{
 				}
 			}
 		}
+		# Now we check if a drive is not attached, error code 46
+		my $failed_pattern = 'c[0-9]*\/e[0-9]*\/s[0-9]*\s+Failure\s+46';
+		if(my @match = grep { /$failed_pattern/ } @output){
+			$match[0] =~ /(c[0-9]*\/e[0-9]*\/s[0-9]*)/;
+			my $dev = {};
+			$dev->{'pd'} = $1;
+			$dev->{'Detailed Status'} = 'Failure-46';
+			push @foundDevs, $dev;
+		}
 	}
 	else {
 		if(grep { /No drive found/i } @output){
@@ -627,6 +640,12 @@ sub getPDStatus{
 			if($PD->{'S.M.A.R.T alert flagged by drive'} ne 'No'){
 				$status = 'Warning' unless $status eq 'Critical';
 				push @{$statusLevel_a[1]}, $PD->{'pd'}.'_SMART_flag';
+			}
+		}
+		if(exists($PD->{'Detailed Status'})){
+			if($PD->{'Detailed Status'} eq 'Failure-46'){
+				$status = 'Warning' unless $status eq 'Critical';
+				push @{$statusLevel_a[1]}, $PD->{'pd'}.'_Detailed_status';
 			}
 		}
 		if(exists($PD->{'DG'})){
