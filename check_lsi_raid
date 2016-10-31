@@ -807,24 +807,24 @@ sub getBBUStatus {
 				}
 				elsif($currBlock eq 'GasGaugeStatus'){
 					if($line =~ /^Fully Discharged/){
-						$line =~ /([a-zA-Z]*)$/;
-						if($1 ne "No") {
+						$line =~ /([a-zA-Z\/]*)$/;
+						if($1 ne "No" && $1 ne "N/A") {
 							$status = 'Critical';
 							push @{$statusLevel_a[2]},'BBU_GasGauge_discharged';
 							$statusLevel_a[3]->{'BBU_GasGauge_discharged'} = $1;
 						}
 					}
 					elsif($line =~ /^Over Temperature/){
-						$line =~ /([a-zA-Z]*)$/;
-						if($1 ne "No") {
+						$line =~ /([a-zA-Z\/]*)$/;
+						if($1 ne "No" && $1 ne "N/A") {
 							$status = 'Warning' unless $status eq 'Critical';
 							push @{$statusLevel_a[1]},'BBU_GasGauge_over_temperature';
 							$statusLevel_a[3]->{'BBU_GasGauge_over_temperature'} = $1;
 						}
 					}
 					elsif($line =~ /^Over Charged/){
-						$line =~ /([a-zA-Z]*)$/;
-						if($1 ne "No") {
+						$line =~ /([a-zA-Z\/]*)$/;
+						if($1 ne "No" && $1 ne "N/A") {
 							$status = 'Critical';
 							push @{$statusLevel_a[2]},'BBU_GasGauge_over_charged';
 							$statusLevel_a[3]->{'BBU_GasGauge_over_charged'} = $1;
