@@ -31,7 +31,7 @@ use Getopt::Long qw(:config no_ignore_case);
 use File::Which;
 
 our $VERBOSITY = 0;
-our $VERSION = "2.4";
+our $VERSION = "2.5";
 our $NAME = "check_lsi_raid: Nagios/Icinga plugin to check LSI Raid Controller status";
 our $C_TEMP_WARNING = 85;
 our $C_TEMP_CRITICAL = 95;
