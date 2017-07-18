@@ -195,7 +195,7 @@ sub checkCommandStatus{
 			if($line eq "Status = Success\n"){
 				return 1;
 			}
-			elsif (grep { /Failure\s+46/i } @output){
+			elsif (grep { /Fail(ed|ure)\s+46/i } @output){
 				# Return 46 means a drive is not attached, this is a valid failure
 				return 1;
 			}
