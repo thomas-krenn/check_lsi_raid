@@ -225,11 +225,18 @@ sub getControllerTime{
 # @return A hash, each key a value of the raid controller info
 sub getControllerInfo{
 	my $storcli = shift;
+	my $writelogs = shift;
 	my $commands_a = shift;
 	my $command = '';
 
 	$storcli =~ /^(.*)\/c[0-9]+/;
-	$command = $1.'adpallinfo a'.$CONTROLLER;
+	if(!defined($writelogs)){
+		$command = $1.'adpallinfo a'.$CONTROLLER.' -NoLog';
+	}
+	else{
+		$command = $1.'adpallinfo a'.$CONTROLLER;
+	}
+
 	push @{$commands_a}, $command;
 	my @output = `$command`;
 	if($? >> 8 != 0){
@@ -1309,7 +1316,7 @@ MAIN: {
 	if($bbuPresent == 1){getBBUStatus($storcli, \@statusLevel_a, $verboseCommands_a); }
 	if($cvPresent == 1){ getCVStatus($storcli, \@statusLevel_a, $verboseCommands_a); }
 
-	my $controllerToCheck = getControllerInfo($storcli, $verboseCommands_a);
+	my $controllerToCheck = getControllerInfo($storcli, $noCleanlogs, $verboseCommands_a);
 	my $LDDevicesToCheck = getLogicalDevices($storcli, \@logDevices, 'all', $verboseCommands_a);
 	my $LDInitToCheck = getLogicalDevices($storcli, \@logDevices, 'init', $verboseCommands_a);
 	my $PDDevicesToCheck = getPhysicalDevices($storcli, \@enclosures, \@physDevices, 'all', $verboseCommands_a);
