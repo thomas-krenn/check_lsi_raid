@@ -616,7 +616,7 @@ sub getPDStatus{
 			}
 		}
 		if(exists($PD->{'Other Error Count'})){
-			if($PD->{'Other Error Count'} > $IGNERR_O){
+			if(($IGNERR_O != -1) && ($PD->{'Other Error Count'} > $IGNERR_O)){
 				$status = 'Warning' unless $status eq 'Critical';
 				push @{$statusLevel_a[1]}, $PD->{'pd'}.'_Other_error_count';
 				$statusLevel_a[3]->{$PD->{'pd'}.'_Other_error_count'} = $PD->{'Other Error Count'};
