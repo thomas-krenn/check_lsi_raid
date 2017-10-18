@@ -1259,6 +1259,16 @@ MAIN: {
 			if(!defined($storcli)){
 				$storcli = which('storcli64');
 			}
+			if(!defined($storcli)){
+				if(-x '/opt/MegaRAID/storcli/storcli64'){
+					$storcli = '/opt/MegaRAID/storcli/storcli64';
+				}
+			}
+			if(!defined($storcli)){
+				if(-x '/opt/MegaRAID/storcli/storcli'){
+					$storcli = '/opt/MegaRAID/storcli/storcli';
+				}
+			}
 		}
 		else{
 			$storcli = which('storcli.exe');
