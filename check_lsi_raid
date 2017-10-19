@@ -126,7 +126,7 @@ sub displayUsage {
     threshold is $IGNERR_B.\n";
 	print "  [ -p <path> | --path <path>]
     Specifies the path to StorCLI, per default uses the tool 'which' to get
-    the StorCLI path.\n";
+    the StorCLI path and also checks for binaries in /opt/MegaRAID/storcli.\n";
 	print "  [ -b <0/1> | --BBU <0/1> ]
     Check if a BBU or a CacheVault module is present. One must be present unless
     '-b 0' is defined. This ensures that for a given controller a BBU/CV must be
@@ -161,6 +161,8 @@ Please send an email to the tk-monitoring plugin-user mailing list:
 if you have questions regarding use of this software, to submit patches, or
 suggest improvements.
 Example usage:
+* If StorCli can be found with 'which' or in /opt/MegaRAID/storcli
+  * check_lsi_raid
 * check_lsi_raid -p /opt/MegaRAID/storcli/storcli64
 * check_lsi_raid -p /opt/MegaRAID/storcli/storcli64 -C 1\n";
 	exit(STATE_UNKNOWN);
