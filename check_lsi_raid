@@ -1123,7 +1123,9 @@ sub getVerboseString{
 		$verb_str .= "\t\t- ".'Revision No='.$controllerToCheck{'Revision No'}."\n";
 		$verb_str .= "\t\t- ".'BIOS Version='.$controllerToCheck{'BIOS Version'}."\n";
 		$verb_str .= "\t\t- ".'FW Version='.$controllerToCheck{'FW Version'}."\n";
-		$verb_str .= "\t\t- ".'ROC temperature='.$controllerToCheck{'ROC temperature'}."\n";
+		if(exists($controllerToCheck{'ROC temperature'})){
+			$verb_str .= "\t\t- ".'ROC temperature='.$controllerToCheck{'ROC temperature'}."\n";
+		}
 		$verb_str .= "LD information:\n";
 		foreach my $LD (@LDDevicesToCheck){
 			$verb_str .= "\t- ".$LD->{'ld'}.":\n";
