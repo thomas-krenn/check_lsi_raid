@@ -108,7 +108,7 @@
 
 ## License
 
-Copyright (C) 2013-2016 Thomas-Krenn.AG
+Copyright (C) 2013-2018 Thomas-Krenn.AG
 
 This program is free software; you can redistribute it and/or modify it under
 the terms of the GNU General Public License as published by the Free Software
