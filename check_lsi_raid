@@ -724,9 +724,26 @@ sub getBBUStatus {
 	push @{$commands_a}, $command;
 
 	my $status = '';
+	my $learn_cycle_active = 0;
 	my @output = `$command`;
 	if(checkCommandStatus(\@output)) {
 		my $currBlock;
+		foreach my $line (@output) {
+			if($line =~ /^(BBU_Firmware_Status)/){
+				$currBlock = $1;
+				next;
+			}
+			if(defined($currBlock and $currBlock eq 'BBU_Firmware_Status')){
+				$line =~ s/^\s+|\s+$//g;#trim line
+				if ($line =~ /^Learn Cycle Active/){
+					$line =~ /([a-zA-Z\/]*)$/;
+					if($1 eq "Yes") {
+						$learn_cycle_active = 1;
+					}
+				}
+			}
+		}
+		undef $currBlock;
 		foreach my $line (@output) {
 			if($line =~ /^(BBU_Info|BBU_Firmware_Status|GasGaugeStatus)/){
 				$currBlock = $1;
@@ -737,7 +754,7 @@ sub getBBUStatus {
 				if($currBlock eq 'BBU_Info'){
 					if ($line =~ /^Battery State/){
 						$line =~ /([a-zA-Z]*)$/;
-							if($1 ne 'Optimal'){
+							if(!$learn_cycle_active && $1 ne 'Optimal'){
 								$status = 'Warning' unless $status eq 'Critical';
 								push @{$statusLevel_a[1]}, 'BBU_State';
 								$statusLevel_a[3]->{'BBU_State'} = $1
@@ -799,7 +816,7 @@ sub getBBUStatus {
 					}
 					elsif($line =~ /^Remaining Capacity Low/){
 						$line =~ /([a-zA-Z]*)$/;
-						if($1 ne "No") {
+						if(!$learn_cycle_active && $1 ne "No") {
 							$status = 'Warning' unless $status eq 'Critical';
 							push @{$statusLevel_a[1]},'BBU_Remaining_capacity_low';
 							$statusLevel_a[3]->{'BBU_Remaining_capacity_low'} = $1;
@@ -817,7 +834,7 @@ sub getBBUStatus {
 				elsif($currBlock eq 'GasGaugeStatus'){
 					if($line =~ /^Fully Discharged/){
 						$line =~ /([a-zA-Z\/]*)$/;
-						if($1 ne "No" && $1 ne "N/A") {
+						if(!$learn_cycle_active && $1 ne "No" && $1 ne "N/A") {
 							$status = 'Critical';
 							push @{$statusLevel_a[2]},'BBU_GasGauge_discharged';
 							$statusLevel_a[3]->{'BBU_GasGauge_discharged'} = $1;
