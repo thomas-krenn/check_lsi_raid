@@ -35,6 +35,8 @@ our $VERSION = "2.5";
 our $NAME = "check_lsi_raid: Nagios/Icinga plugin to check LSI Raid Controller status";
 our $C_TEMP_WARNING = 85;
 our $C_TEMP_CRITICAL = 95;
+our $C_MEM_CORRECTABLE_WARNING = 0;
+our $C_MEM_CORRECTABLE_CRITICAL = 0;
 our $PD_TEMP_WARNING = 40;
 our $PD_TEMP_CRITICAL = 45;
 our $BBU_TEMP_WARNING = 50;
@@ -311,8 +313,14 @@ sub getControllerStatus{
 		}
 		elsif($key eq 'Memory Correctable Errors'){
 			if($foundController{$key} != 0){
-				$status = 'Warning' unless $status eq 'Critical';
-				push @{$statusLevel_a[1]}, 'CTR_Memory_correctable_errors';
+				if(!(checkThreshs($foundController{$key}, $C_MEM_CORRECTABLE_CRITICAL))){
+					$status = 'Critical';
+					push @{$statusLevel_a[2]}, 'CTR_Memory_correctable_errors';
+				}
+				elsif(!(checkThreshs($foundController{$key}, $C_MEM_CORRECTABLE_WARNING))){
+					$status = 'Warning' unless $status eq 'Critical';
+					push @{$statusLevel_a[1]}, 'CTR_Memory_correctable_errors';
+				}
 				$statusLevel_a[3]->{'CTR_Memory_correctable_errors'} = $foundController{$key};
 			}
 		}
@@ -1234,6 +1242,8 @@ MAIN: {
 		'PD|physicaldevice=s' => \@physDevices,
 		'Tw|temperature-warn=s' => \$C_TEMP_WARNING,
 		'Tc|temperature-critical=s' => \$C_TEMP_CRITICAL,
+		'Mcw|mem-correctable-warn=s' => \$C_MEM_CORRECTABLE_WARNING,
+		'Mcc|mem-correctable-critical=s' => \$C_MEM_CORRECTABLE_CRITICAL,
 		'PDTw|physicaldevicetemperature-warn=s' => \$PD_TEMP_WARNING,
 		'PDTc|physicaldevicetemperature-critical=s' => \$PD_TEMP_CRITICAL,
 		'BBUTw|bbutemperature-warning=s' => \$BBU_TEMP_WARNING,
