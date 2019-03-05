@@ -234,13 +234,15 @@ sub getControllerInfo{
 	my $command = '';
 
 	$storcli =~ /^(.*)\/c[0-9]+/;
-	if(!defined($writelogs)){
-		$command = $1.'adpallinfo a'.$CONTROLLER.' -NoLog';
-	}
-	else{
-		$command = $1.'adpallinfo a'.$CONTROLLER;
-	}
-
+	# if(!defined($writelogs)){
+	# 	$command = $1.'adpallinfo a'.$CONTROLLER.' -NoLog';
+	# }
+	# else{
+	# 	$command = $1.'adpallinfo a'.$CONTROLLER;
+	# }
+	#per https://github.com/thomas-krenn/check_lsi_raid/issues/24
+	$command = $1.'/c'.$CONTROLLER.' show';
+	
 	push @{$commands_a}, $command;
 	my @output = `$command`;
 	if($? >> 8 != 0){
