@@ -113,13 +113,13 @@ sub displayUsage {
     Specifies the warning threshold for media errors per disk, the default
     threshold is $IGNERR_M.\n";
 	print "  [ -Io <count> | --ignore-other-errors <count> ]
-    Specifies the warning threshold for media errors per disk, the default
+    Specifies the warning threshold for other errors per disk, the default
     threshold is $IGNERR_O.\n";
 	print "  [ -Ip <count> | --ignore-predictive-fail-count <count> ]
-    Specifies the warning threshold for media errors per disk, the default
+    Specifies the warning threshold for predictive failure analysis errors per disk, the default
     threshold is $IGNERR_P.\n";
 	print "  [ -Is <count> | --ignore-shield-counter <count> ]
-    Specifies the warning threshold for media errors per disk, the default
+    Specifies the warning threshold for shield counter per disk, the default
     threshold is $IGNERR_S.\n";
     print "  [ -Ib <count> | --ignore-bbm-counter <count> ]
     Specifies the warning threshold for bbm errors per disk, the default
