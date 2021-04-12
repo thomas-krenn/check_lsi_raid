@@ -244,7 +244,7 @@ sub getControllerInfo{
 	}
 	my %foundController_h;
 	foreach my $line(@output){
-		if($line =~ /\:/){
+		if($line =~ /\=/){
 			my @lineVals = split('=', $line);
 			$lineVals[0] =~ s/^\s+|\s+$//g;
 			$lineVals[1] =~ s/^\s+|\s+$//g;
