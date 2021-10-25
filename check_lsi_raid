@@ -175,8 +175,11 @@ Example usage:
 # @param storcli The path to storcli command utility
 sub displayVersion {
 	my $storcli = shift;
+	my $writelogs = shift;
 	if(defined($storcli)){
-		my @storcliVersion = `$storcli -v`;
+		my $command = $storcli.' -v';
+		if(!$writelogs) { $command .= ' nolog'; }
+		my @storcliVersion = `$command`;
 		foreach my $line (@storcliVersion){
 			if($line =~ /^\s+StorCli.*/) {
 				$line =~ s/^\s+|\s+$//g;
@@ -217,7 +220,10 @@ sub checkCommandStatus{
 # @return 1 on success, 0 if not
 sub getControllerTime{
 	my $storcli = shift;
-	my @output = `$storcli show time`;
+	my $writelogs = shift;
+	my $command = $storcli.' show time';
+	if(!$writelogs) { $command .= ' nolog'; }
+	my @output = `$command`;
 	return (checkCommandStatus(\@output));
 }
 
@@ -235,6 +241,7 @@ sub getControllerInfo{
 
 	$storcli =~ /^(.*)\/c[0-9]+/;
 	$command = $1.'/c'.$CONTROLLER.' show all';
+	if(!$writelogs) { $command .= ' nolog'; }
 	
 	push @{$commands_a}, $command;
 	my @output = `$command`;
@@ -355,6 +362,7 @@ sub getControllerStatus{
 # hash keys.
 sub getLogicalDevices{
 	my $storcli = shift;
+	my $writelogs = shift;
 	my @logDevices = @{(shift)};
 	my $action = shift;
 	my $commands_a = shift;
@@ -364,6 +372,7 @@ sub getLogicalDevices{
 	elsif(scalar(@logDevices) == 1) { $command .= "/v$logDevices[0]"; }
 	else { $command .= "/v".join(",", @logDevices); }
 	$command .= " show $action";
+	if(!$writelogs) { $command .= ' nolog'; }
 	push @{$commands_a}, $command;
 
 	my @output = `$command`;
@@ -483,6 +492,7 @@ sub getLDStatus{
 # hash keys.
 sub getPhysicalDevices{
 	my $storcli = shift;
+	my $writelogs = shift;
 	my @enclosures = @{(shift)};
 	my @physDevices = @{(shift)};
 	my $action = shift;
@@ -498,6 +508,7 @@ sub getPhysicalDevices{
 	elsif(scalar(@physDevices) == 1) { $command .= "/s$physDevices[0]"; }
 	else { $command .= "/s".join(",", @physDevices); }
 	$command .= " show $action";
+	if(!$writelogs) { $command .= ' nolog'; }
 	push @{$commands_a}, $command;
 
 	my @output = `$command`;
@@ -720,10 +731,12 @@ sub getPDStatus{
 # @param commands_a An array to push the used command to
 sub getBBUStatus {
 	my $storcli = shift;
+	my $writelogs = shift;
 	my @statusLevel_a = @{(shift)};
 	my $commands_a = shift;
 
 	my $command = "$storcli /bbu show status";
+	if(!$writelogs) { $command .= ' nolog'; }
 	push @{$commands_a}, $command;
 
 	my $status = '';
@@ -876,10 +889,12 @@ sub getBBUStatus {
 # @param commands_a An array to push the used command to
 sub getCVStatus {
 	my $storcli = shift;
+	my $writelogs = shift;
 	my @statusLevel_a = @{(shift)};
 	my $commands_a = shift;
 
-	my $command = "$storcli /cv show status";
+	my $command = $storcli." /cv show status";
+	if(!$writelogs) { $command .= ' nolog'; }
 	push @{$commands_a}, $command;
 
 	my $status = '';
@@ -950,11 +965,16 @@ sub getCVStatus {
 # @return A tuple, e.g. (0,0), where 0 means module is not present, 1 present
 sub checkBBUorCVIsPresent{
 	my $storcli = shift;
+	my $writelogs = shift;
 	my ($bbu,$cv);
-	my @output = `$storcli /bbu show`;
+	my $command = $storcli." /bbu show";
+	if(!$writelogs) { $command .= ' nolog'; }
+	my @output = `$command`;
 	if(checkCommandStatus(\@output)){ $bbu = 1; }
 	else{ $bbu = 0 };
-	@output = `$storcli /cv show`;
+	$command = $storcli." /cv show";
+	if(!$writelogs) { $command .= ' nolog'; }
+	@output = `$command`;
 	if(checkCommandStatus(\@output)) { $cv = 1; }
 	else{ $cv = 0 };
 	return ($bbu, $cv);
@@ -1305,11 +1325,11 @@ MAIN: {
 		}
 	}
 	# Print storcli version if available
-	if(defined($version)){ displayVersion($storcli) }
+	if(defined($version)){ displayVersion($storcli, $noCleanlogs) }
 	# Prepare storcli command
 	$storcli .= " /c$CONTROLLER";
 	# Check if the controller number can be used
-	if(!getControllerTime($storcli)){
+	if(!getControllerTime($storcli, $noCleanlogs)){
 		print "Error: invalid controller number, controller not found!\n";
 		exit(STATE_UNKNOWN);
 	}
@@ -1324,7 +1344,7 @@ MAIN: {
 	}
 	my ($bbuPresent,$cvPresent) = (0,0);
 	if($bbu == 1){
-		($bbuPresent,$cvPresent) = checkBBUorCVIsPresent($storcli);
+		($bbuPresent,$cvPresent) = checkBBUorCVIsPresent($storcli, $noCleanlogs);
 		if($bbuPresent == 0 && $cvPresent == 0){
 			${$statusLevel_a[0]} = 'Critical';
 			push @{$criticals_a}, 'BBU/CV_Present';
@@ -1332,15 +1352,15 @@ MAIN: {
 			$statusLevel_a[3]->{'CV_Status'} = 'Critical';
 		}
 	}
-	if($bbuPresent == 1){getBBUStatus($storcli, \@statusLevel_a, $verboseCommands_a); }
-	if($cvPresent == 1){ getCVStatus($storcli, \@statusLevel_a, $verboseCommands_a); }
+	if($bbuPresent == 1){getBBUStatus($storcli, $noCleanlogs, \@statusLevel_a, $verboseCommands_a); }
+	if($cvPresent == 1){ getCVStatus($storcli, $noCleanlogs, \@statusLevel_a, $verboseCommands_a); }
 
 	my $controllerToCheck = getControllerInfo($storcli, $noCleanlogs, $verboseCommands_a);
-	my $LDDevicesToCheck = getLogicalDevices($storcli, \@logDevices, 'all', $verboseCommands_a);
-	my $LDInitToCheck = getLogicalDevices($storcli, \@logDevices, 'init', $verboseCommands_a);
-	my $PDDevicesToCheck = getPhysicalDevices($storcli, \@enclosures, \@physDevices, 'all', $verboseCommands_a);
-	my $PDInitToCheck = getPhysicalDevices($storcli, \@enclosures, \@physDevices, 'initialization', $verboseCommands_a);
-	my $PDRebuildToCheck = getPhysicalDevices($storcli, \@enclosures, \@physDevices, 'rebuild', $verboseCommands_a);
+	my $LDDevicesToCheck = getLogicalDevices($storcli, $noCleanlogs, \@logDevices, 'all', $verboseCommands_a);
+	my $LDInitToCheck = getLogicalDevices($storcli, $noCleanlogs, \@logDevices, 'init', $verboseCommands_a);
+	my $PDDevicesToCheck = getPhysicalDevices($storcli, $noCleanlogs, \@enclosures, \@physDevices, 'all', $verboseCommands_a);
+	my $PDInitToCheck = getPhysicalDevices($storcli, $noCleanlogs, \@enclosures, \@physDevices, 'initialization', $verboseCommands_a);
+	my $PDRebuildToCheck = getPhysicalDevices($storcli, $noCleanlogs, \@enclosures, \@physDevices, 'rebuild', $verboseCommands_a);
 
 	getControllerStatus(\@statusLevel_a, $controllerToCheck);
 	getLDStatus(\@statusLevel_a, $LDDevicesToCheck);
