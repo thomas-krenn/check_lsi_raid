@@ -1369,13 +1369,6 @@ MAIN: {
 	getPDStatus(\@statusLevel_a, $PDInitToCheck);
 	getPDStatus(\@statusLevel_a, $PDRebuildToCheck);
 
-	# If desired, clean up the logs created by storcli
-	# This is done per default
-	if(!defined($noCleanlogs)){
-		if(-f 'MegaSAS.log'){ unlink 'MegaSAS.log'}
-		if(-f 'CmdTool.log'){ unlink 'CmdTool.log'}
-	}
-
 	print ${$statusLevel_a[0]}." ";
 	print getStatusString("Critical",\@statusLevel_a);
 	print getStatusString("Warning",\@statusLevel_a);
