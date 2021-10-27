@@ -45,6 +45,7 @@ our $CV_TEMP_WARNING = 70;
 our $CV_TEMP_CRITICAL = 85;
 our ($IGNERR_M, $IGNERR_O, $IGNERR_P, $IGNERR_S, $IGNERR_B) = (0, 0, 0, 0, 0);
 our $NOENCLOSURES = 0;
+our $NOWRITEBACKOK = 0;
 our $CONTROLLER = 0;
 
 use constant {
@@ -137,6 +138,9 @@ sub displayUsage {
     Specifies if enclosures are present or not. 0 means enclosures are
     present (default), 1 states no enclosures are used (no 'eall' in
     storcli commands).\n";
+    print "  [ --nowritebackok <0/1> ]
+    Specifies if a WriteThrough Cache configuration is ok or not. 0 means WriteThrough is
+    considered Critical (default), 1 states WriteThrough is ok.\n";
     print "  [ --nosudo ]
     Turn off using sudo.\n";
     print "  [ --nocleanlogs ]
@@ -447,6 +451,15 @@ sub getLDStatus{
 				$status = 'Critical';
 				push @{$statusLevel_a[2]}, $LD->{'ld'}.'_State';
 				$statusLevel_a[3]->{$LD->{'ld'}.'_State'} = $LD->{'State'};
+			}
+		}
+		if(!$NOWRITEBACKOK){
+			if(exists($LD->{'Cache'})){
+				if(index($LD->{'Cache'}, 'WB') == -1){
+					$status = 'Critical';
+					push @{$statusLevel_a[2]}, $LD->{'ld'}.'_Cache';
+					$statusLevel_a[3]->{$LD->{'ld'}.'_Cache'} = $LD->{'Cache'};
+				}
 			}
 		}
 		if(exists($LD->{'Consist'})){
@@ -1290,6 +1303,7 @@ MAIN: {
 		'p|path=s' => \$storcli,
 		'b|BBU=i' => \$bbu,
 		'noenclosures=i' => \$NOENCLOSURES,
+		'nowritebackok=i' => \$NOWRITEBACKOK,
 		'nosudo' => \$noSudo,
 		'nocleanlogs' => \$noCleanlogs
 	))){
