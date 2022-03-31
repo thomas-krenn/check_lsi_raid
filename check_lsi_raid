@@ -391,7 +391,7 @@ sub getLogicalDevices{
 					next;
 				}
 				if(defined($currBlock)){
-					if($line =~ /^DG\/VD TYPE.*/){
+					if($line =~ /^DG\/VD[[:blank:]]+TYPE.*/){
 						@splittedLine = split(' ', $line);
 						if(scalar(@splittedLine)== 9){
 							$LDMAP = \@map_a;
