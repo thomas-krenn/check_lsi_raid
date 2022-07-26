@@ -130,10 +130,11 @@ sub displayUsage {
 	print "  [ -p <path> | --path <path>]
     Specifies the path to StorCLI, per default uses the tool 'which' to get
     the StorCLI path and also checks for binaries in /opt/MegaRAID/storcli.\n";
-	print "  [ -b <0/1> | --BBU <0/1> ]
+	print "  [ -b <0/1/2> | --BBU <0/1/2> ]
     Check if a BBU or a CacheVault module is present. One must be present unless
     '-b 0' is defined. This ensures that for a given controller a BBU/CV must be
-    present per default.\n";
+    present per default. '-b 2' checks if one is present, but does not exit
+	CRITICAL when there is no BBU/CV.\n";
 	print "  [ --noenclosures <0/1> ]
     Specifies if enclosures are present or not. 0 means enclosures are
     present (default), 1 states no enclosures are used (no 'eall' in
@@ -1369,14 +1370,15 @@ MAIN: {
 	@logDevices = split(/,/,join(',', @logDevices));
 	@physDevices = split(/,/,join(',', @physDevices));
 	# Check if the BBU param is correct
-	if(($bbu != 1) && ($bbu != 0)) {
-		print "Error: invalid BBU/CV parameter, must be 0 or 1!\n";
+	if(($bbu != 2) && ($bbu != 1) && ($bbu != 0)) {
+    	print "Error: invalid BBU/CV parameter, must be 0, 1 or 2!\n";
 		exit(STATE_UNKNOWN);
 	}
 	my ($bbuPresent,$cvPresent) = (0,0);
-	if($bbu == 1){
+	if($bbu == 1 || $bbu == 2){
 		($bbuPresent,$cvPresent) = checkBBUorCVIsPresent($storcli, $noCleanlogs);
-		if($bbuPresent == 0 && $cvPresent == 0){
+		# Only exit with CRITICAL if bbu param is 1
+		if($bbuPresent == 0 && $cvPresent == 0 && $bbu == 1){
 			${$statusLevel_a[0]} = 'Critical';
 			push @{$criticals_a}, 'BBU/CV_Present';
 			$statusLevel_a[3]->{'BBU_Status'} = 'Critical';
