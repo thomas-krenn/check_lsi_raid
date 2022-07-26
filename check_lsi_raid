@@ -1371,7 +1371,7 @@ MAIN: {
 	@physDevices = split(/,/,join(',', @physDevices));
 	# Check if the BBU param is correct
 	if(($bbu != 2) && ($bbu != 1) && ($bbu != 0)) {
-    	print "Error: invalid BBU/CV parameter, must be 0, 1 or 2!\n";
+		print "Error: invalid BBU/CV parameter, must be 0, 1 or 2!\n";
 		exit(STATE_UNKNOWN);
 	}
 	my ($bbuPresent,$cvPresent) = (0,0);
