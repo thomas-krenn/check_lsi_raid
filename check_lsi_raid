@@ -1227,7 +1227,7 @@ sub getVerboseString{
 }
 
 # Get the performance string for the current check. The values are taken from
-# the varbose hash in the status level array.
+# the verbose hash in the status level array.
 # @param statusLevel_a The current status level array
 # @return The created performance string
 sub getPerfString{
