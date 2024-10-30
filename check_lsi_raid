@@ -46,6 +46,7 @@ our $CV_TEMP_CRITICAL = 85;
 our ($IGNERR_M, $IGNERR_O, $IGNERR_P, $IGNERR_S, $IGNERR_B) = (0, 0, 0, 0, 0);
 our $NOENCLOSURES = 0;
 our $NOWRITEBACKOK = 0;
+our $NOCONSISTENCYOK = 0;
 our $CONTROLLER = 0;
 
 use constant {
@@ -142,6 +143,9 @@ sub displayUsage {
     print "  [ --nowritebackok <0/1> ]
     Specifies if a WriteThrough Cache configuration is ok or not. 0 means WriteThrough is
     considered Critical (default), 1 states WriteThrough is ok.\n";
+    print "  [ --noconsistencyok <0/1> ]
+    Specifies if the consistency of logical devices should be checked. 0 means consistency
+    should be checked (default), 1 means not.\n";
     print "  [ --nosudo ]
     Turn off using sudo.\n";
     print "  [ --nocleanlogs ]
@@ -463,11 +467,13 @@ sub getLDStatus{
 				}
 			}
 		}
-		if(exists($LD->{'Consist'})){
-			if($LD->{'Consist'} ne 'Yes' && $LD->{'TYPE'} ne 'Cac1'){
-				$status = 'Warning' unless $status eq 'Critical';
-				push @{$statusLevel_a[1]}, $LD->{'ld'}.'_Consist';
-				$statusLevel_a[3]->{$LD->{'ld'}.'_Consist'} = $LD->{'Consist'};
+		if(!$NOCONSISTENCYOK){
+			if(exists($LD->{'Consist'})){
+				if($LD->{'Consist'} ne 'Yes' && $LD->{'TYPE'} ne 'Cac1'){
+					$status = 'Warning' unless $status eq 'Critical';
+					push @{$statusLevel_a[1]}, $LD->{'ld'}.'_Consist';
+					$statusLevel_a[3]->{$LD->{'ld'}.'_Consist'} = $LD->{'Consist'};
+				}
 			}
 		}
 		if(exists($LD->{'init'})){
@@ -1305,6 +1311,7 @@ MAIN: {
 		'b|BBU=i' => \$bbu,
 		'noenclosures=i' => \$NOENCLOSURES,
 		'nowritebackok=i' => \$NOWRITEBACKOK,
+		'noconsistencyok=i' => \$NOCONSISTENCYOK,
 		'nosudo' => \$noSudo,
 		'nocleanlogs' => \$noCleanlogs
 	))){
