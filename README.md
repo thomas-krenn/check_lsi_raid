@@ -1,5 +1,13 @@
 # check_lsi_raid - Nagios/Icinga plugin to check LSI RAID Controllers
 
+## WARNING
+
+Running this plugin at a low time frame frequently (e.g. every 1/5/10 minutes) the controller suffers from
+performance issues!
+Most of the time is might be sufficient to check the status of controller and disks once a day to not
+affect performance but also get a decent monitoring.
+Cf. https://github.com/thomas-krenn/check_lsi_raid/issues/42
+
 ## General
 
 * The LSI RAID Monitoring Plugin is a Nagios/Icinga to check the LSI RAID Controller for warnings or critical errors.
