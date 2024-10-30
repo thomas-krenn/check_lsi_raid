@@ -98,9 +98,13 @@
 
 * It is possible that the NRPE daemon runs as user 'nrpe'. If that's the case
   you have to change the user in the sudoers entry.
-* It may be necessary to specify the perl interpretor explicitly in the NRPE
+* It may be necessary to specify the perl interpreter explicitly in the NRPE
   command definition, e.g.:
   command[check_lsi_raid]=/usr/lib/nagios/plugins/check_lsi_raid -C 0 -p /usr/sbin/storcli
+* On newer CentOS/RedHat systems problems with sudo/SELinux might occur. In order to run the plugin
+  as root the following sudoers options might help:
+  Defaults:nrpe !requiretty
+  Further more cf. https://github.com/thomas-krenn/check_lsi_raid/issues/7 
 
 ## Parameter usage (example)
 
