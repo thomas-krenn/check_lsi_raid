@@ -251,7 +251,7 @@ sub getControllerInfo{
 	$storcli =~ /^(.*)\/c[0-9]+/;
 	$command = $1.'/c'.$CONTROLLER.' show all';
 	if(!$writelogs) { $command .= ' nolog'; }
-	
+
 	push @{$commands_a}, $command;
 	my @output = `$command`;
 	if($? >> 8 != 0){
